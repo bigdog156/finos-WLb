@@ -77,3 +77,11 @@ struct CheckInBody: Codable, Sendable {
         case accuracyM = "accuracy_m"
     }
 }
+
+/// Shape of the `check-in` Edge Function's non-422 error responses, e.g.
+/// `{ "error": "no_branch_assigned" }` or
+/// `{ "error": "bad_request", "detail": "invalid accuracy_m" }`.
+struct CheckInErrorPayload: Decodable, Sendable {
+    let error: String
+    let detail: String?
+}

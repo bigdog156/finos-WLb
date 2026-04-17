@@ -18,7 +18,11 @@ struct BranchesListView: View {
     var body: some View {
         List {
             ForEach(filtered) { branch in
-                NavigationLink(value: branch) {
+                NavigationLink {
+                    BranchEditorView(mode: .edit(branch)) { _ in
+                        await load()
+                    }
+                } label: {
                     row(branch)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -56,11 +60,6 @@ struct BranchesListView: View {
                 BranchEditorView(mode: .create) { _ in
                     await load()
                 }
-            }
-        }
-        .navigationDestination(for: BranchWithGeo.self) { branch in
-            BranchEditorView(mode: .edit(branch)) { _ in
-                await load()
             }
         }
         .confirmationDialog(

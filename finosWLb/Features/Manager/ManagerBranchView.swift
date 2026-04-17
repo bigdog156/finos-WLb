@@ -1,4 +1,6 @@
 import SwiftUI
+internal import PostgREST
+import Supabase
 
 /// "My Branch" — today-only snapshot of the manager's branch roster, grouped
 /// by derived state and searchable by name. Backed by the

@@ -162,9 +162,13 @@ struct TodayView: View {
 
     private func loadLastState() async {
         do {
+            let startOfDay = Calendar.current.startOfDay(for: Date())
+            let startISO = ISO8601DateFormatter.supabase.string(from: startOfDay)
+
             let events: [AttendanceEvent] = try await SupabaseManager.shared.client
                 .from("attendance_events")
                 .select("id, type, server_ts, client_ts, status, flagged_reason, branch_id, accuracy_m")
+                .gte("server_ts", value: startISO)
                 .order("server_ts", ascending: false)
                 .limit(1)
                 .execute()

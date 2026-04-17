@@ -21,6 +21,7 @@ struct UserEditorView: View {
 
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var currentUserId: UUID?
 
     init(
         profile: Profile,
@@ -46,25 +47,46 @@ struct UserEditorView: View {
                     .textInputAutocapitalization(.words)
             }
 
-            Section("Role") {
+            Section {
                 Picker("Role", selection: $role) {
                     ForEach(UserRole.allCases, id: \.self) { r in
                         Text(r.rawValue.capitalized).tag(r)
                     }
                 }
                 .pickerStyle(.segmented)
+                .disabled(isSelfEdit)
+            } header: {
+                Text("Role")
+            } footer: {
+                if isSelfEdit {
+                    Text("You can't change your own role.")
+                }
             }
 
-            Section("Assignment") {
+            Section {
                 branchMenu
                 departmentMenu
+            } header: {
+                Text("Assignment")
+            } footer: {
+                if role != .admin && branchId == nil {
+                    Text("Managers and employees must be assigned to a branch.")
+                        .foregroundStyle(.red)
+                }
             }
 
-            Section("Status") {
+            Section {
                 Toggle("Active", isOn: $active)
+                    .disabled(isSelfEdit)
+            } header: {
+                Text("Status")
+            } footer: {
+                if isSelfEdit {
+                    Text("You can't deactivate your own account.")
+                }
             }
 
-            if active {
+            if active && !isSelfEdit {
                 Section {
                     Button(role: .destructive) {
                         active = false
@@ -102,6 +124,11 @@ struct UserEditorView: View {
                     }
                 }
                 .disabled(!isValid || !hasChanges || isSaving)
+            }
+        }
+        .task {
+            if currentUserId == nil {
+                currentUserId = try? await SupabaseManager.shared.client.auth.session.user.id
             }
         }
     }
@@ -174,8 +201,14 @@ struct UserEditorView: View {
 
     // MARK: - Derived
 
+    private var isSelfEdit: Bool {
+        currentUserId == initialProfile.id
+    }
+
     private var isValid: Bool {
-        !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if role != .admin && branchId == nil { return false }
+        return true
     }
 
     private var hasChanges: Bool {
@@ -186,6 +219,15 @@ struct UserEditorView: View {
             || active != initialProfile.active
     }
 
+    /// True when this save would remove the last active admin — demoting an
+    /// active admin or deactivating one. The check is skipped for non-admins
+    /// and for no-op saves on admins.
+    private var wouldRemoveActiveAdmin: Bool {
+        initialProfile.role == .admin
+            && initialProfile.active
+            && (role != .admin || !active)
+    }
+
     // MARK: - Networking
 
     private func save() async {
@@ -193,6 +235,19 @@ struct UserEditorView: View {
         isSaving = true
         defer { isSaving = false }
         errorMessage = nil
+
+        if wouldRemoveActiveAdmin {
+            do {
+                let remaining = try await countOtherActiveAdmins()
+                if remaining == 0 {
+                    errorMessage = "You can't deactivate or demote the last active admin."
+                    return
+                }
+            } catch {
+                errorMessage = "Couldn't verify admin count: \(error.localizedDescription)"
+                return
+            }
+        }
 
         let payload = ProfileUpdatePayload(
             fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -222,6 +277,17 @@ struct UserEditorView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func countOtherActiveAdmins() async throws -> Int {
+        let response = try await SupabaseManager.shared.client
+            .from("profiles")
+            .select("id", head: true, count: .exact)
+            .eq("role", value: UserRole.admin.rawValue)
+            .eq("active", value: true)
+            .neq("id", value: initialProfile.id.uuidString)
+            .execute()
+        return response.count ?? 0
     }
 }
 

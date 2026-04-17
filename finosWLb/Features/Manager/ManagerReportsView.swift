@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 /// Manager Reports — scope-switchable attendance view (Day / Week / Month)
 /// scoped to the manager's branch via RLS. Shares the admin reports DTOs

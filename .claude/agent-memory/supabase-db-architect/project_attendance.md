@@ -23,11 +23,13 @@ Project ref: `destaoobmomlzhxfiamv`
 - 0014_reports_storage — `reports` storage bucket (private, no direct RLS policies; write via service_role, read via signed URLs from export-report EF)
 - 0015_distance_m — ADD COLUMN distance_m DOUBLE PRECISION to attendance_events (nullable; NULL on historical rows)
 - 0016_absent_cron — pg_cron extension; mark_absent_yesterday() function; cron job 'mark-absent-yesterday' at '0 2 * * *'
+- 0017_profiles_self_signup_insert — INSERT policy for self-signup flow; audit_table_change() converted to SECURITY DEFINER
 
 ## Edge Functions
 - `check-in` version 3 (verify_jwt=true) — GPS + WiFi BSSID risk scoring, impossible travel detection; now persists distance_m on all insert paths and selects it back
 - `review-event` version 1 (verify_jwt=true)
 - `create-user` version 1 (verify_jwt=true) — admin-only invite flow; inviteUserByEmail + profile insert + audit_log write; returns { user_id, email }; 409 on duplicate email
+- Self-signup flow added 2026-04-17: auth.signUp() → upsertSelfProfile() in AuthStore.swift; email confirmation is OFF on this project (users auto-confirmed at creation); session exists immediately after signUp so client-side profile upsert runs
 - `export-report` version 1 (verify_jwt=true) — admin/manager CSV export; queries attendance_days+profiles+branches+departments; uploads to reports bucket via service_role; returns { signed_url, filename, row_count, expires_at }; managers forced to their branch_id
 
 ## Known acceptable security advisor warnings

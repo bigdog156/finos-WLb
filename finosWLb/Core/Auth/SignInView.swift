@@ -42,6 +42,14 @@ struct SignInView: View {
                     Text(message).foregroundStyle(.red)
                 }
             }
+
+            Section {
+                NavigationLink("Create account") {
+                    SignUpView()
+                }
+            } footer: {
+                Text("New employees can self-register and wait for an administrator to activate their account.")
+            }
         }
         .navigationTitle("Sign In")
     }

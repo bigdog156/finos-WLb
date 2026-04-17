@@ -30,7 +30,7 @@ struct AdminUsersView: View {
     @State private var showInactive: Bool = false
     @State private var search: String = ""
 
-    @State private var showingInvite = false
+    @State private var showingSetup = false
     @State private var banner: String?
 
     var body: some View {
@@ -56,7 +56,15 @@ struct AdminUsersView: View {
             }
 
             ForEach(filtered) { profile in
-                NavigationLink(value: profile) {
+                NavigationLink {
+                    UserEditorView(
+                        profile: profile,
+                        branches: branches,
+                        departments: departments
+                    ) { _ in
+                        await load()
+                    }
+                } label: {
                     row(profile)
                 }
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -87,11 +95,11 @@ struct AdminUsersView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingInvite = true
+                    showingSetup = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "person.crop.circle.badge.plus")
                 }
-                .accessibilityLabel("Invite user")
+                .accessibilityLabel("Setup pending user")
             }
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
@@ -117,24 +125,15 @@ struct AdminUsersView: View {
                 .accessibilityLabel("Filters")
             }
         }
-        .sheet(isPresented: $showingInvite) {
-            InviteUserView(
+        .sheet(isPresented: $showingSetup) {
+            SetupPendingUserView(
                 branches: branches,
                 departments: departments
-            ) { response in
+            ) { updated in
                 // Reload first (which clears banner), then set the success
                 // message so it survives until the next explicit reload.
                 await load()
-                banner = "Invited \(response.email). They'll receive an email."
-            }
-        }
-        .navigationDestination(for: Profile.self) { profile in
-            UserEditorView(
-                profile: profile,
-                branches: branches,
-                departments: departments
-            ) { _ in
-                await load()
+                banner = "Updated"
             }
         }
         .task { await load() }

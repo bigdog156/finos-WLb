@@ -1,5 +1,7 @@
 import SwiftUI
 import Charts
+import Supabase
+internal import PostgREST
 
 /// Admin dashboard — today's KPI strip, a 30-day stacked-status chart, and a
 /// per-branch breakdown. Designed to live inside `AdminSettingsList`'s

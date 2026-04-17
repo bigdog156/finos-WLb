@@ -122,7 +122,7 @@ struct BranchWifiView: View {
         do {
             rows = try await SupabaseManager.shared.client
                 .from("branch_wifi")
-                .select("id, branch_id, bssid, ssid")
+                .select("branch_id, bssid, ssid")
                 .eq("branch_id", value: branch.id.uuidString)
                 .order("bssid")
                 .execute()
@@ -173,9 +173,10 @@ struct BranchWifiView: View {
                 try await SupabaseManager.shared.client
                     .from("branch_wifi")
                     .delete()
-                    .eq("id", value: target.id.uuidString)
+                    .eq("branch_id", value: target.branchId.uuidString)
+                    .eq("bssid", value: target.bssid)
                     .execute()
-                rows.removeAll { $0.id == target.id }
+                rows.removeAll { $0.branchId == target.branchId && $0.bssid == target.bssid }
                 errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription

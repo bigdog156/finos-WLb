@@ -155,7 +155,7 @@ struct ManagerReviewQueue: View {
                       systemImage: "wifi")
                     .labelStyle(.titleAndIcon)
                     .font(.caption)
-                    .foregroundStyle(event.bssid != nil ? .secondary : .red)
+                    .foregroundStyle(event.bssid != nil ? Color.secondary : Color.red)
             }
         }
     }

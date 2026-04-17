@@ -1,4 +1,6 @@
 import SwiftUI
+internal import PostgREST
+import Supabase
 
 /// Admin Reports — scope-switched (Day / Week / Month) attendance drill-downs
 /// with CSV export and filter chips. Lives inside `AdminSettingsList`'s

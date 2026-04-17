@@ -86,9 +86,15 @@ final class CheckInService {
                 radiusM: response.radiusM
             )
         } catch let FunctionsError.httpError(code, data) where code == 422 {
+            // Server wrote a `rejected` row and returned it with a reason.
             let rejection = (try? JSONDecoder().decode(CheckInResponse.self, from: data))?
                 .event.flaggedReason ?? "Rejected"
             throw CheckInError.rejected(rejection)
+        } catch let FunctionsError.httpError(code, data) where (400..<500).contains(code) {
+            // 400/403/404 etc. are validation failures the user needs to act on
+            // (inactive profile, no branch, signed out). Never queue these — the
+            // server would reject the replay with the same error.
+            throw CheckInError.rejected(Self.friendlyMessage(from: data, status: code))
         } catch {
             queueOffline(
                 type: type,
@@ -97,6 +103,31 @@ final class CheckInService {
                 wifi: wifi
             )
             throw CheckInError.networkQueued
+        }
+    }
+
+    /// Maps the EF's `{error, detail}` shape to a user-facing message.
+    private static func friendlyMessage(from data: Data, status: Int) -> String {
+        let payload = try? JSONDecoder().decode(CheckInErrorPayload.self, from: data)
+        switch payload?.error {
+        case "profile_inactive":
+            return "Your account isn't active yet. Ask an admin to activate you."
+        case "no_branch_assigned":
+            return "You're not assigned to a branch yet. Ask an admin to assign one."
+        case "profile_not_found":
+            return "Your profile wasn't found. Sign out and back in."
+        case "branch_not_found":
+            return "Your assigned branch wasn't found."
+        case "unauthorized":
+            return "Your session expired. Please sign in again."
+        case "bad_request":
+            return "Check-in request was invalid. \(payload?.detail ?? "")"
+                .trimmingCharacters(in: .whitespaces)
+        default:
+            if let detail = payload?.detail, !detail.isEmpty {
+                return "Check-in failed (HTTP \(status)): \(detail)"
+            }
+            return "Check-in failed (HTTP \(status))."
         }
     }
 
@@ -145,8 +176,10 @@ final class CheckInService {
                 )
                 modelContext.delete(item)
                 try? modelContext.save()
-            } catch FunctionsError.httpError(let code, _) where code == 422 {
-                // Server rejected — don't retry this one forever.
+            } catch FunctionsError.httpError(let code, _) where (400..<500).contains(code) {
+                // Server rejected with a 4xx — either it's a hard reject (422)
+                // or a validation failure that will never succeed on replay
+                // (inactive user, no branch, expired session). Drop the entry.
                 modelContext.delete(item)
                 try? modelContext.save()
             } catch {
