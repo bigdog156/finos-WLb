@@ -1,0 +1,4 @@
+- [Supabase SDK patterns in this repo](supabase_patterns.md) — how rpc/functions.invoke/head-count look against this codebase's SDK version
+- [Admin/Manager view composition](admin_view_patterns.md) — recurring shapes: List + overlay + ContentUnavailableView triad, toolbar filters, banner sections
+- [Concurrency defaults](concurrency_defaults.md) — project is MainActor-by-default; how existing services escape isolation
+- [Phase 6 reports/dashboard patterns](phase6_reports_patterns.md) — shared ScopePicker/DateScopeStepper/KPITile/ExportSheet, where report DTOs live, Supabase builder traps

@@ -1,0 +1,3 @@
+- [Project context](project_finoswlb.md) — attendance app, iOS 26.2, SwiftUI + SwiftData + Supabase, Admin/Manager/Employee roles.
+- [Visual vocabulary](project_visual_vocabulary.md) — established pill, list, form, and empty-state patterns to match in new designs.
+- [Admin navigation structure](project_admin_structure.md) — Phase 5 decisions on where admin config lives (tabs vs. settings list).

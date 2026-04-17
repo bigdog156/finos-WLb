@@ -2,22 +2,19 @@
 //  finosWLbApp.swift
 //  finosWLb
 //
-//  Created by FinOS on 4/16/26.
-//
 
 import SwiftUI
 import SwiftData
 
 @main
 struct finosWLbApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @State private var auth = AuthStore()
 
+    let modelContainer: ModelContainer = {
+        let schema = Schema([PendingCheckIn.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [config])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -25,8 +22,9 @@ struct finosWLbApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(auth)
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }

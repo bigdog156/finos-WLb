@@ -1,0 +1,15 @@
+# Claude Code
+.claude/settings.local.json
+PROMPT_LOG.md
+
+# Supabase secrets (Swift file with real keys — use Secrets.swift.example as template)
+finosWLb/Core/Supabase/Secrets.swift
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+
+# macOS
+.DS_Store
