@@ -1,4 +1,5 @@
 import SwiftUI
+internal import PostgREST
 import Supabase
 
 /// Manager Review Queue — list of flagged `attendance_events` with realtime
@@ -348,19 +349,22 @@ struct ManagerReviewQueue: View {
             newStatus: newStatus.rawValue,
             note: note
         )
+        let params = ReviewEventRPCParams(
+            p_event_id: event.id,
+            p_new_status: newStatus.rawValue,
+            p_note: note
+        )
         do {
-            let _: ReviewEventResponse = try await SupabaseManager.shared.client
-                .functions
-                .invoke("review-event", options: FunctionInvokeOptions(body: body))
-            // Optimistically drop the card; the realtime UPDATE will also
-            // drop it — `removeIfPresent` keeps that idempotent.
+            let _: EventRPCResponse = try await SupabaseManager.shared.client
+                .rpc("review_event_rpc", params: params)
+                .execute()
+                .value
             withAnimation(reduceMotion ? .default : .spring(response: 0.4)) {
                 events.removeAll { $0.id == event.id }
             }
             successTrigger &+= 1
-        } catch FunctionsError.httpError(let code, let data) {
-            let message = decodeFunctionError(data) ?? "HTTP \(code)"
-            actionError = message
+        } catch let error as PostgrestError {
+            actionError = error.message
             errorTrigger &+= 1
         } catch {
             actionError = error.localizedDescription

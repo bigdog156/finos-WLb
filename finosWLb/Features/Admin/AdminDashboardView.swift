@@ -16,6 +16,10 @@ struct AdminDashboardView: View {
     @State private var selectedDeptId: UUID? = nil
     @State private var departments: [Department] = []
 
+    // Admin-only rich summary + live activity feed
+    @State private var summary: AdminDashboardSummary?
+    @State private var recentEvents: [AdminRecentEvent] = []
+
     // Range picker. Today/7d/30d are preset; .custom opens a sheet with two
     // DatePickers. All four map onto a (from, to) pair before the RPC call.
     enum RangePreset: String, CaseIterable, Identifiable, Hashable {
@@ -107,10 +111,15 @@ struct AdminDashboardView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if let summary { heroHeader(summary) }
+                    if let summary, summary.pendingFlags + summary.pendingLeaves + summary.pendingCorrections > 0 {
+                        pendingWorkStrip(summary)
+                    }
                     if let today { kpiStrip(today) }
                     rangeBar
                     primaryChart
                     branchBreakdown
+                    if !recentEvents.isEmpty { recentActivity }
                 }
                 .padding(16)
             }
@@ -129,6 +138,179 @@ struct AdminDashboardView: View {
                     .presentationDetents([.medium])
             }
         }
+    }
+
+    // MARK: - Hero header
+
+    private func heroHeader(_ summary: AdminDashboardSummary) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            onTimeRing(summary: summary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                miniStat(label: "Chi nhánh", value: summary.totalBranches, system: "building.2")
+                miniStat(label: "Nhân viên hoạt động", value: summary.totalActiveEmployees, system: "person.3")
+                miniStat(label: "Lượt vào hôm nay", value: summary.checkInsToday, system: "arrow.down.circle")
+                miniStat(label: "Lượt ra hôm nay", value: summary.checkOutsToday, system: "arrow.up.circle")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func onTimeRing(summary: AdminDashboardSummary) -> some View {
+        let percent = Int((summary.onTimeRate * 100).rounded())
+        let color: Color = percent >= 80 ? .green : percent >= 50 ? .orange : .red
+        return ZStack {
+            Circle()
+                .stroke(color.opacity(0.2), lineWidth: 10)
+            Circle()
+                .trim(from: 0, to: max(0.01, summary.onTimeRate))
+                .stroke(color, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.6), value: summary.onTimeRate)
+            VStack(spacing: 0) {
+                Text("\(percent)%")
+                    .font(.title2.bold().monospacedDigit())
+                    .foregroundStyle(color)
+                Text("Đúng giờ")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 110, height: 110)
+    }
+
+    private func miniStat(label: String, value: Int, system: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: system)
+                .font(.callout)
+                .foregroundStyle(.tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(value)")
+                    .font(.headline.monospacedDigit())
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Pending work strip
+
+    private func pendingWorkStrip(_ summary: AdminDashboardSummary) -> some View {
+        let items: [(Int, String, String, Color)] = [
+            (summary.pendingFlags, "Sự kiện gắn cờ", "flag.fill", .yellow),
+            (summary.pendingLeaves, "Đơn nghỉ phép", "sun.max.fill", .blue),
+            (summary.pendingCorrections, "Bổ sung công", "calendar.badge.plus", .orange),
+        ]
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Việc cần xử lý")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            HStack(spacing: 10) {
+                ForEach(items, id: \.1) { count, label, icon, color in
+                    pendingPill(count: count, label: label, icon: icon, color: color)
+                }
+            }
+        }
+    }
+
+    private func pendingPill(count: Int, label: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.callout)
+                    .foregroundStyle(color)
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.title3.bold().monospacedDigit())
+                }
+            }
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(count > 0 ? .primary : .secondary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(count > 0 ? color.opacity(0.12) : Color.secondary.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(count > 0 ? color.opacity(0.3) : .clear, lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Recent activity feed
+
+    private var recentActivity: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Hoạt động gần đây").font(.headline)
+                Spacer()
+                Text("\(recentEvents.count) sự kiện")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(recentEvents.enumerated()), id: \.element.id) { idx, event in
+                    recentEventRow(event)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                    if idx < recentEvents.count - 1 {
+                        Divider().padding(.leading, 52)
+                    }
+                }
+            }
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func recentEventRow(_ event: AdminRecentEvent) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill((event.eventType == .checkIn ? Color.green : Color.blue).opacity(0.15))
+                    .frame(width: 32, height: 32)
+                Image(systemName: event.eventType == .checkIn
+                      ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    .foregroundStyle(event.eventType == .checkIn ? Color.green : Color.blue)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(event.employeeName).font(.subheadline.weight(.medium))
+                    Text("· \(event.branchName)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 6) {
+                    Text(formatRelative(event.serverTs))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    if event.status != .onTime {
+                        StatusBadge(status: event.status)
+                    }
+                }
+            }
+            Spacer()
+        }
+    }
+
+    private func formatRelative(_ iso: String) -> String {
+        let formatters: [ISO8601DateFormatter] = [.supabase, ISO8601DateFormatter()]
+        for f in formatters {
+            if let date = f.date(from: iso) {
+                return date.formatted(.relative(presentation: .named))
+            }
+        }
+        return iso
     }
 
     // MARK: - Range bar (segmented presets + custom)
@@ -575,11 +757,25 @@ struct AdminDashboardView: View {
                 .execute()
                 .value
 
-            let (todayRows, kpis, depts, ser) = try await (todayRowsReq, branchesReq, deptReq, seriesReq)
+            async let summaryReq: [AdminDashboardSummary] = SupabaseManager.shared.client
+                .rpc("admin_dashboard_summary")
+                .execute()
+                .value
+
+            async let recentReq: [AdminRecentEvent] = SupabaseManager.shared.client
+                .rpc("admin_recent_events", params: RecentEventsParams(p_limit: 15))
+                .execute()
+                .value
+
+            let (todayRows, kpis, depts, ser, sum, recent) = try await (
+                todayRowsReq, branchesReq, deptReq, seriesReq, summaryReq, recentReq
+            )
             today = todayRows.first
             byBranch = kpis
             departments = depts
             series = ser
+            summary = sum.first
+            recentEvents = recent
             errorMessage = nil
             lastLoadAt = Date()
 
@@ -732,4 +928,9 @@ enum ISO8601Date {
     static func format(_ date: Date) -> String {
         DailySeriesRow.dateFormatter.string(from: date)
     }
+}
+
+/// Params wrapper for `admin_recent_events(p_limit integer)`.
+private struct RecentEventsParams: Encodable, Sendable {
+    let p_limit: Int
 }

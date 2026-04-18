@@ -13,14 +13,19 @@
 		1699EDCE2F91CC1200B4181E /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1699EDCD2F91CC1200B4181E /* Realtime */; };
 		1699EDD02F91CC1200B4181E /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 1699EDCF2F91CC1200B4181E /* Storage */; };
 		1699EDD22F91CC1200B4181E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1699EDD12F91CC1200B4181E /* Supabase */; };
+		16F8F1502F9365A5008023C6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16F8F14F2F9365A5008023C6 /* WidgetKit.framework */; };
+		16F8F1522F9365A5008023C6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16F8F1512F9365A5008023C6 /* SwiftUI.framework */; };
+		16F8F1632F9365A5008023C6 /* finosWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 16F8F14D2F9365A5008023C6 /* finosWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
-/* Begin PBXFileReference section */
-		1699EB732F908E5800B4181E /* finosWLb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = finosWLb.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FA0100010000000000000001 /* finosWLbTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = finosWLbTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
 /* Begin PBXContainerItemProxy section */
+		16F8F1612F9365A5008023C6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1699EB6B2F908E5800B4181E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 16F8F14C2F9365A5008023C6;
+			remoteInfo = finosWidgetExtension;
+		};
 		FA0100010000000000000011 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1699EB6B2F908E5800B4181E /* Project object */;
@@ -30,10 +35,50 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		16F8F1682F9365A5008023C6 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				16F8F1632F9365A5008023C6 /* finosWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1699EB732F908E5800B4181E /* finosWLb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = finosWLb.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		16F8F14D2F9365A5008023C6 /* finosWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = finosWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		16F8F14F2F9365A5008023C6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		16F8F1512F9365A5008023C6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		FA0100010000000000000001 /* finosWLbTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = finosWLbTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		16F8F1642F9365A5008023C6 /* Exceptions for "finosWidget" folder in "finosWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 16F8F14C2F9365A5008023C6 /* finosWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1699EB752F908E5800B4181E /* finosWLb */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = finosWLb;
+			sourceTree = "<group>";
+		};
+		16F8F1532F9365A5008023C6 /* finosWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				16F8F1642F9365A5008023C6 /* Exceptions for "finosWidget" folder in "finosWidgetExtension" target */,
+			);
+			path = finosWidget;
 			sourceTree = "<group>";
 		};
 		FA0100010000000000000003 /* finosWLbTests */ = {
@@ -57,6 +102,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		16F8F14A2F9365A5008023C6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16F8F1522F9365A5008023C6 /* SwiftUI.framework in Frameworks */,
+				16F8F1502F9365A5008023C6 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA0100010000000000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -72,6 +126,8 @@
 			children = (
 				1699EB752F908E5800B4181E /* finosWLb */,
 				FA0100010000000000000003 /* finosWLbTests */,
+				16F8F1532F9365A5008023C6 /* finosWidget */,
+				16F8F14E2F9365A5008023C6 /* Frameworks */,
 				1699EB742F908E5800B4181E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -81,8 +137,18 @@
 			children = (
 				1699EB732F908E5800B4181E /* finosWLb.app */,
 				FA0100010000000000000001 /* finosWLbTests.xctest */,
+				16F8F14D2F9365A5008023C6 /* finosWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		16F8F14E2F9365A5008023C6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				16F8F14F2F9365A5008023C6 /* WidgetKit.framework */,
+				16F8F1512F9365A5008023C6 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -95,10 +161,12 @@
 				1699EB6F2F908E5800B4181E /* Sources */,
 				1699EB702F908E5800B4181E /* Frameworks */,
 				1699EB712F908E5800B4181E /* Resources */,
+				16F8F1682F9365A5008023C6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				16F8F1622F9365A5008023C6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1699EB752F908E5800B4181E /* finosWLb */,
@@ -115,6 +183,28 @@
 			productName = finosWLb;
 			productReference = 1699EB732F908E5800B4181E /* finosWLb.app */;
 			productType = "com.apple.product-type.application";
+		};
+		16F8F14C2F9365A5008023C6 /* finosWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16F8F1652F9365A5008023C6 /* Build configuration list for PBXNativeTarget "finosWidgetExtension" */;
+			buildPhases = (
+				16F8F1492F9365A5008023C6 /* Sources */,
+				16F8F14A2F9365A5008023C6 /* Frameworks */,
+				16F8F14B2F9365A5008023C6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				16F8F1532F9365A5008023C6 /* finosWidget */,
+			);
+			name = finosWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = finosWidgetExtension;
+			productReference = 16F8F14D2F9365A5008023C6 /* finosWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		FA0100010000000000000002 /* finosWLbTests */ = {
 			isa = PBXNativeTarget;
@@ -150,6 +240,9 @@
 					1699EB722F908E5800B4181E = {
 						CreatedOnToolsVersion = 26.2;
 					};
+					16F8F14C2F9365A5008023C6 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					FA0100010000000000000002 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 1699EB722F908E5800B4181E;
@@ -175,12 +268,20 @@
 			targets = (
 				1699EB722F908E5800B4181E /* finosWLb */,
 				FA0100010000000000000002 /* finosWLbTests */,
+				16F8F14C2F9365A5008023C6 /* finosWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		1699EB712F908E5800B4181E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		16F8F14B2F9365A5008023C6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -204,6 +305,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		16F8F1492F9365A5008023C6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA0100010000000000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -214,6 +322,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		16F8F1622F9365A5008023C6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 16F8F14C2F9365A5008023C6 /* finosWidgetExtension */;
+			targetProxy = 16F8F1612F9365A5008023C6 /* PBXContainerItemProxy */;
+		};
 		FA0100010000000000000010 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1699EB722F908E5800B4181E /* finosWLb */;
@@ -413,6 +526,66 @@
 			};
 			name = Release;
 		};
+		16F8F1662F9365A5008023C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WG88Y62JAT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = finosWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = finosWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = vietmind.finosWLb.finosWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		16F8F1672F9365A5008023C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WG88Y62JAT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = finosWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = finosWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = vietmind.finosWLb.finosWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		FA0100010000000000000008 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -477,6 +650,15 @@
 			buildConfigurations = (
 				1699EB812F908E5800B4181E /* Debug */,
 				1699EB822F908E5800B4181E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		16F8F1652F9365A5008023C6 /* Build configuration list for PBXNativeTarget "finosWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16F8F1662F9365A5008023C6 /* Debug */,
+				16F8F1672F9365A5008023C6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,4 +1,6 @@
 import SwiftUI
+import OSLog
+internal import PostgREST
 import Supabase
 
 /// Manager-facing leave review queue. RLS auto-scopes `leave_requests` to the
@@ -249,9 +251,33 @@ struct ManagerLeaveReviewView: View {
             requests = fetched
             await refreshNameCache(for: fetched)
             errorMessage = nil
+        } catch let decodingError as DecodingError {
+            errorMessage = Self.describe(decodingError)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Turns Swift's generic "isn't in the correct format" into something
+    /// a human reading the alert can act on.
+    private static func describe(_ error: DecodingError) -> String {
+        switch error {
+        case .typeMismatch(let type, let ctx):
+            return "Sai kiểu dữ liệu cho \(type) tại \(path(ctx)): \(ctx.debugDescription)"
+        case .valueNotFound(let type, let ctx):
+            return "Thiếu giá trị \(type) tại \(path(ctx)): \(ctx.debugDescription)"
+        case .keyNotFound(let key, let ctx):
+            return "Thiếu trường \(key.stringValue) tại \(path(ctx))"
+        case .dataCorrupted(let ctx):
+            return "Dữ liệu không hợp lệ tại \(path(ctx)): \(ctx.debugDescription)"
+        @unknown default:
+            return error.localizedDescription
+        }
+    }
+
+    private static func path(_ ctx: DecodingError.Context) -> String {
+        let parts = ctx.codingPath.map { $0.stringValue }
+        return parts.isEmpty ? "root" : parts.joined(separator: ".")
     }
 
     private func refreshNameCache(for requests: [LeaveRequest]) async {
@@ -278,27 +304,32 @@ struct ManagerLeaveReviewView: View {
         note: String?
     ) async {
         guard newStatus == .approved || newStatus == .rejected else { return }
+        AppLog.ui.info("review-leave submit \(newStatus.rawValue, privacy: .public) for request \(request.id.uuidString, privacy: .public)")
 
         busyIds.insert(request.id)
         defer { busyIds.remove(request.id) }
 
-        let body = ReviewLeaveBody(
-            requestId: request.id,
-            newStatus: newStatus.rawValue,
-            note: note
+        let params = ReviewLeaveRPCParams(
+            p_request_id: request.id,
+            p_new_status: newStatus.rawValue,
+            p_note: note
         )
         do {
             let response: ReviewLeaveResponse = try await SupabaseManager.shared.client
-                .functions
-                .invoke("review-leave", options: FunctionInvokeOptions(body: body))
+                .rpc("review_leave_rpc", params: params)
+                .execute()
+                .value
+            AppLog.ui.info("review_leave_rpc succeeded → \(response.leave.status.rawValue, privacy: .public)")
             if let idx = requests.firstIndex(where: { $0.id == response.leave.id }) {
                 requests[idx] = response.leave
             }
             successTrigger &+= 1
-        } catch FunctionsError.httpError(let code, let data) {
-            actionError = decodeFunctionError(data) ?? "HTTP \(code)"
+        } catch let error as PostgrestError {
+            AppLog.ui.error("review_leave_rpc failed: \(error.message, privacy: .public)")
+            actionError = error.message
             errorTrigger &+= 1
         } catch {
+            AppLog.ui.error("review_leave_rpc failed: \(logMessage(for: error), privacy: .public)")
             actionError = error.localizedDescription
             errorTrigger &+= 1
         }

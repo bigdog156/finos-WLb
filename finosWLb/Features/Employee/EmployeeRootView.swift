@@ -8,7 +8,7 @@ struct EmployeeRootView: View {
             NavigationStack { TodayView() }
                 .tabItem { Label("Hôm nay", systemImage: "clock.badge.checkmark") }
 
-            NavigationStack { EmployeeHistoryView() }
+            NavigationStack { EmployeeHistoryView(profile: profile) }
                 .tabItem { Label("Lịch sử", systemImage: "list.bullet.rectangle") }
 
             NavigationStack { EmployeeLeavesView(profile: profile) }

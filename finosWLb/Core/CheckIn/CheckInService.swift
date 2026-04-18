@@ -1,5 +1,7 @@
 import Foundation
 import CoreLocation
+import OSLog
+internal import PostgREST
 import SwiftData
 import Supabase
 
@@ -50,6 +52,7 @@ final class CheckInService {
     }
 
     func submit(type: AttendanceEventType, note: String? = nil) async throws -> CheckInOutcome {
+        AppLog.checkin.info("submit \(type.rawValue, privacy: .public) requested (note=\(note != nil, privacy: .public))")
         isWorking = true
         defer { isWorking = false }
 
@@ -57,8 +60,10 @@ final class CheckInService {
         do {
             location = try await locationService.requestLocation()
         } catch {
+            AppLog.checkin.error("submit — location failed: \(logMessage(for: error), privacy: .public)")
             throw CheckInError.locationFailed(error.localizedDescription)
         }
+        AppLog.checkin.debug("submit — location acquired, accuracy=\(location.horizontalAccuracy, privacy: .public)m")
 
         // Best-effort Wi-Fi read. Never fail the submission on a nil here — the
         // backend handles missing bssid/ssid gracefully.
@@ -67,38 +72,52 @@ final class CheckInService {
         let noteValue = (trimmedNote?.isEmpty == false) ? trimmedNote : nil
 
         let clientTs = Date()
-        let body = CheckInBody(
-            type: type.rawValue,
-            clientTs: ISO8601DateFormatter.supabase.string(from: clientTs),
-            lat: location.coordinate.latitude,
-            lng: location.coordinate.longitude,
-            accuracyM: location.horizontalAccuracy,
-            bssid: wifi?.bssid,
-            ssid: wifi?.ssid,
-            note: noteValue
+        let params = CheckInRPCParams(
+            p_type: type.rawValue,
+            p_client_ts: ISO8601DateFormatter.supabase.string(from: clientTs),
+            p_lat: location.coordinate.latitude,
+            p_lng: location.coordinate.longitude,
+            p_accuracy_m: location.horizontalAccuracy,
+            p_bssid: wifi?.bssid,
+            p_ssid: wifi?.ssid,
+            p_note: noteValue
         )
 
         do {
-            let response: CheckInResponse = try await client.functions.invoke(
-                "check-in",
-                options: FunctionInvokeOptions(body: body)
-            )
+            // Direct DB call via SECURITY DEFINER RPC — bypasses the Deno
+            // Edge Function runtime entirely. The JWT travels in the
+            // PostgREST Authorization header as usual; `auth.uid()` inside
+            // the function resolves to the signed-in user.
+            let response: CheckInRPCResponse = try await client
+                .rpc("check_in_rpc", params: params)
+                .execute()
+                .value
+            AppLog.checkin.info("submit succeeded — status=\(response.event.status.rawValue, privacy: .public) distance=\(response.distanceM, privacy: .public)m rejected=\(response.rejected, privacy: .public)")
+
+            if response.rejected {
+                // The rejection reason was stored in flagged_reason by the
+                // RPC. Surface it so the user sees why.
+                throw CheckInError.rejected(
+                    response.event.flaggedReason ?? "Chấm công bị từ chối."
+                )
+            }
+
             return CheckInOutcome(
                 event: response.event,
                 distanceM: response.distanceM,
                 radiusM: response.radiusM
             )
-        } catch let FunctionsError.httpError(code, data) where code == 422 {
-            // Server wrote a `rejected` row and returned it with a reason.
-            let rejection = (try? JSONDecoder().decode(CheckInResponse.self, from: data))?
-                .event.flaggedReason ?? "Bị từ chối"
-            throw CheckInError.rejected(rejection)
-        } catch let FunctionsError.httpError(code, data) where (400..<500).contains(code) {
-            // 400/403/404 etc. are validation failures the user needs to act on
-            // (inactive profile, no branch, signed out). Never queue these — the
-            // server would reject the replay with the same error.
-            throw CheckInError.rejected(Self.friendlyMessage(from: data, status: code))
+        } catch let error as CheckInError {
+            throw error
+        } catch let error as PostgrestError {
+            // RPC raised an exception: profile_inactive, no_branch_assigned,
+            // forbidden, etc. Surface the Postgres message — it's already
+            // short + actionable + matches the EF error code names.
+            AppLog.checkin.error("check_in_rpc failed: \(error.message, privacy: .public) code=\(error.code ?? "?", privacy: .public)")
+            let message = Self.friendlyMessageFromPostgres(error.message)
+            throw CheckInError.rejected(message)
         } catch {
+            AppLog.checkin.error("submit — network error, queuing: \(logMessage(for: error), privacy: .public)")
             queueOffline(
                 type: type,
                 clientTs: clientTs,
@@ -108,6 +127,28 @@ final class CheckInService {
             )
             throw CheckInError.networkQueued
         }
+    }
+
+    /// Maps known Postgres exception messages raised by `check_in_rpc` onto
+    /// the Vietnamese copy the old Edge Function path used.
+    private static func friendlyMessageFromPostgres(_ raw: String) -> String {
+        let lowered = raw.lowercased()
+        if lowered.contains("profile_inactive") {
+            return CheckInServerError.profileInactive.userMessage
+        }
+        if lowered.contains("no_branch_assigned") {
+            return CheckInServerError.noBranchAssigned.userMessage
+        }
+        if lowered.contains("profile_not_found") {
+            return CheckInServerError.profileNotFound.userMessage
+        }
+        if lowered.contains("branch_not_found") {
+            return CheckInServerError.branchNotFound.userMessage
+        }
+        if lowered.contains("unauthorized") {
+            return CheckInServerError.unauthorized.userMessage
+        }
+        return raw
     }
 
     /// Maps the EF's `{error, detail}` shape to a user-facing message.
@@ -172,34 +213,47 @@ final class CheckInService {
             sortBy: [SortDescriptor(\.createdAt)]
         )
         guard let items = try? modelContext.fetch(descriptor), !items.isEmpty else { return }
+        AppLog.checkin.info("flushQueue — \(items.count, privacy: .public) pending items")
 
         for item in items {
             // Replay the Wi-Fi that was captured at queue time — that's what
             // proves presence-at-branch, not the network we happen to be on
             // now (which may be home/cellular).
-            let body = CheckInBody(
-                type: item.type,
-                clientTs: ISO8601DateFormatter.supabase.string(from: item.clientTs),
-                lat: item.lat,
-                lng: item.lng,
-                accuracyM: item.accuracyM,
-                bssid: item.bssid,
-                ssid: item.ssid,
-                note: item.note
+            let params = CheckInRPCParams(
+                p_type: item.type,
+                p_client_ts: ISO8601DateFormatter.supabase.string(from: item.clientTs),
+                p_lat: item.lat,
+                p_lng: item.lng,
+                p_accuracy_m: item.accuracyM,
+                p_bssid: item.bssid,
+                p_ssid: item.ssid,
+                p_note: item.note
             )
             do {
-                let _: CheckInResponse = try await client.functions.invoke(
-                    "check-in",
-                    options: FunctionInvokeOptions(body: body)
-                )
+                let _: CheckInRPCResponse = try await client
+                    .rpc("check_in_rpc", params: params)
+                    .execute()
+                    .value
                 modelContext.delete(item)
                 try? modelContext.save()
-            } catch FunctionsError.httpError(let code, _) where (400..<500).contains(code) {
-                // Server rejected with a 4xx — either it's a hard reject (422)
-                // or a validation failure that will never succeed on replay
-                // (inactive user, no branch, expired session). Drop the entry.
-                modelContext.delete(item)
-                try? modelContext.save()
+            } catch let error as PostgrestError {
+                // Deterministic failure (e.g., profile_inactive, no_branch)
+                // — replay won't succeed until an admin acts, so drop.
+                let msg = error.message.lowercased()
+                let isUserActionable = msg.contains("profile_inactive")
+                    || msg.contains("no_branch_assigned")
+                    || msg.contains("profile_not_found")
+                    || msg.contains("branch_not_found")
+                    || msg.contains("unauthorized")
+                if isUserActionable {
+                    modelContext.delete(item)
+                    try? modelContext.save()
+                } else {
+                    item.attemptCount += 1
+                    item.lastError = error.message
+                    try? modelContext.save()
+                    break
+                }
             } catch {
                 item.attemptCount += 1
                 item.lastError = error.localizedDescription

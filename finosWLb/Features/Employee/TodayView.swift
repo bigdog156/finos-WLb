@@ -4,6 +4,7 @@ internal import PostgREST
 import Supabase
 
 struct TodayView: View {
+    @Environment(AuthStore.self) private var auth
     @Environment(\.modelContext) private var modelContext
     @State private var service: CheckInService?
     @State private var uiState: UIState = .unknown
@@ -15,6 +16,7 @@ struct TodayView: View {
     @State private var showPendingSheet = false
     @State private var pendingNote: String = ""
     @State private var showNoteSheet = false
+    @State private var shift: Shift?
 
     enum UIState { case unknown, checkedIn, checkedOut }
 
@@ -22,6 +24,7 @@ struct TodayView: View {
         ScrollView {
             VStack(spacing: 20) {
                 clockHeader
+                shiftChip
                 statusCard
                 primaryActionButton
                 noteRow
@@ -42,7 +45,10 @@ struct TodayView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Hôm nay")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await loadTodayEvents() }
+        .refreshable {
+            await loadTodayEvents()
+            await loadShift()
+        }
         .task {
             if service == nil {
                 service = CheckInService(
@@ -52,9 +58,10 @@ struct TodayView: View {
                 )
             }
             await loadTodayEvents()
+            await loadShift()
             await service?.flushQueue()
         }
-        .alert("Không thể chấm công", isPresented: $showError, presenting: errorMessage) { _ in
+        .alert(alertTitle, isPresented: $showError, presenting: errorMessage) { _ in
             Button("OK") { errorMessage = nil }
         } message: { msg in
             Text(msg)
@@ -90,6 +97,57 @@ struct TodayView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    // MARK: - Shift info chip
+
+    @ViewBuilder
+    private var shiftChip: some View {
+        if let shift {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.callout)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ca \(shift.name) · \(shiftTimeRange(shift))")
+                        .font(.subheadline.weight(.medium))
+                    Text("\(shift.daysOfWeek.weekdaySummary) · cho phép trễ \(shift.graceMin) phút")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        } else if case .signedIn(let profile) = auth.state, profile.branchId != nil {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Text("Chưa có ca làm việc — liên hệ quản trị viên")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        }
+    }
+
+    private func shiftTimeRange(_ shift: Shift) -> String {
+        let start = shift.startLocal.split(separator: ":").prefix(2).joined(separator: ":")
+        let end = shift.endLocal.split(separator: ":").prefix(2).joined(separator: ":")
+        return "\(start) – \(end)"
     }
 
     // MARK: - Status card
@@ -378,7 +436,7 @@ struct TodayView: View {
             return "Đang kiểm tra trạng thái hiện tại"
         case .checkedIn:
             if let t = lastCheckInTimeText {
-                return "Bắt đầu ca lúc \(t)"
+                return "Đã chấm công vào lúc \(t)"
             }
             return "Bạn đã chấm công vào"
         case .checkedOut:
@@ -424,6 +482,17 @@ struct TodayView: View {
 
     // MARK: - Actions
 
+    /// Alert title reflects whether the last outcome was a hard reject
+    /// (user couldn't check in) or a flagged success (stored but needs
+    /// manager review) — so the one alert view doesn't mislabel the
+    /// second case as a failure.
+    private var alertTitle: String {
+        if lastOutcome?.event.status == .flagged {
+            return "Đã lưu — chờ duyệt"
+        }
+        return "Không thể chấm công"
+    }
+
     private func performAction(type: AttendanceEventType) async {
         guard let service else { return }
         errorMessage = nil
@@ -432,10 +501,18 @@ struct TodayView: View {
             let result = try await service.submit(type: type, note: note.isEmpty ? nil : note)
             lastOutcome = result
             hapticTrigger &+= 1
-            if result.event.status == .rejected {
+            switch result.event.status {
+            case .rejected:
                 errorMessage = result.event.flaggedReason ?? "Chấm công bị từ chối."
                 showError = true
-            } else {
+            case .flagged:
+                // Flagged still counts as checked-in; surface the reason so
+                // the user knows the event will need manager review.
+                uiState = (type == .checkIn) ? .checkedIn : .checkedOut
+                pendingNote = ""
+                errorMessage = "Chấm công đã được lưu nhưng cần quản lý duyệt.\n\(result.event.flaggedReason ?? "")"
+                showError = true
+            case .onTime, .late, .absent:
                 uiState = (type == .checkIn) ? .checkedIn : .checkedOut
                 pendingNote = ""
             }
@@ -459,7 +536,7 @@ struct TodayView: View {
             let startISO = ISO8601DateFormatter.supabase.string(from: startOfDay)
             let events: [AttendanceEvent] = try await SupabaseManager.shared.client
                 .from("attendance_events")
-                .select("id, type, server_ts, client_ts, status, flagged_reason, branch_id, accuracy_m")
+                .select("id, type, server_ts, client_ts, status, flagged_reason, branch_id, accuracy_m, note")
                 .gte("server_ts", value: startISO)
                 .order("server_ts", ascending: false)
                 .execute()
@@ -470,10 +547,51 @@ struct TodayView: View {
             } else {
                 uiState = .checkedOut
             }
+            errorMessage = nil
         } catch {
+            // Don't hide auth/network failures behind a fake "checked-out"
+            // state — surface them so the user can react (re-login, check
+            // connection). Keep any prior state until the user acts.
             if uiState == .unknown {
                 uiState = .checkedOut
             }
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    // Mirrors server `is_late` — which reads `branches.default_shift_id` only.
+    // Client respects per-employee overrides (`employee_shifts`) later when
+    // the server honours them too, to avoid client/server label drift.
+    private func loadShift() async {
+        guard case .signedIn(let profile) = auth.state,
+              let branchId = profile.branchId else {
+            shift = nil
+            return
+        }
+        do {
+            let branch: BranchShiftRef = try await SupabaseManager.shared.client
+                .from("branches")
+                .select("default_shift_id")
+                .eq("id", value: branchId.uuidString)
+                .single()
+                .execute()
+                .value
+            guard let shiftId = branch.defaultShiftId else {
+                shift = nil
+                return
+            }
+            let loaded: Shift = try await SupabaseManager.shared.client
+                .from("shifts")
+                .select(Shift.selectColumns)
+                .eq("id", value: shiftId.uuidString)
+                .single()
+                .execute()
+                .value
+            shift = loaded
+        } catch {
+            // Non-fatal — chip just stays hidden.
+            shift = nil
         }
     }
 
@@ -497,6 +615,13 @@ struct TodayView: View {
         let f = DateFormatter()
         f.dateFormat = "dd/MM/yyyy"
         return "\(name), \(f.string(from: date))"
+    }
+}
+
+private struct BranchShiftRef: Decodable, Sendable {
+    let defaultShiftId: UUID?
+    enum CodingKeys: String, CodingKey {
+        case defaultShiftId = "default_shift_id"
     }
 }
 

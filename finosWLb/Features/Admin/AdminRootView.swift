@@ -18,10 +18,24 @@ struct AdminRootView: View {
 }
 
 /// The Settings.app-style root for admin tooling. Each row pushes a
-/// dedicated feature screen.
+/// dedicated feature screen. The top section hosts an "at-a-glance"
+/// quick-stats card so the admin sees today's critical numbers without
+/// tapping into the full dashboard.
 private struct AdminSettingsList: View {
     var body: some View {
         List {
+            Section {
+                AdminQuickStatsCard()
+                    .listRowInsets(.init(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                    )
+                    .listRowSeparator(.hidden)
+            }
+
             Section {
                 NavigationLink {
                     BranchesListView()

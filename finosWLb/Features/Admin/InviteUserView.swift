@@ -198,22 +198,21 @@ struct InviteUserView: View {
 
         do {
             let response: InviteUserResponse = try await SupabaseManager.shared.client
-                .functions
-                .invoke(
-                    "create-user",
-                    options: FunctionInvokeOptions(body: body)
-                )
+                .invokeFunction("create-user", body: body)
             dismiss()
             await onInvited(response)
-        } catch let FunctionsError.httpError(code, data) where code == 409 {
-            if let decoded = try? JSONDecoder().decode(InviteUserErrorResponse.self, from: data),
-               decoded.error == "email_exists" {
+        } catch let InvokeError.edgeFunctionError(status, code, detail) where status == 409 {
+            if code == "email_exists" {
                 emailError = "Email đã được sử dụng."
             } else {
-                emailError = "Email đã được sử dụng."
+                emailError = detail ?? "Email đã được sử dụng."
             }
-        } catch let FunctionsError.httpError(code, _) where code == 403 {
+        } catch let InvokeError.edgeFunctionError(status, _, _) where status == 403 {
             generalError = "Bạn không có quyền mời người dùng."
+        } catch let InvokeError.edgeFunctionError(status, code, detail) {
+            generalError = detail ?? code ?? "HTTP \(status)"
+        } catch InvokeError.noSession {
+            generalError = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
         } catch {
             generalError = error.localizedDescription
         }

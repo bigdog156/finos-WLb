@@ -1,4 +1,5 @@
 import SwiftUI
+internal import PostgREST
 import Supabase
 
 /// Manager-only sheet for correcting an `attendance_events` row via the
@@ -135,23 +136,24 @@ struct EditEventSheet: View {
             ? ISO8601DateFormatter.supabase.string(from: newDate)
             : nil
 
-        let body = EditEventBody(
-            eventId: event.id,
-            newStatus: statusPayload,
-            newServerTs: tsPayload,
-            reason: trimmedReason
+        let params = EditEventRPCParams(
+            p_event_id: event.id,
+            p_new_status: statusPayload,
+            p_new_server_ts: tsPayload,
+            p_reason: trimmedReason
         )
 
         do {
-            let response: EditEventResponse = try await SupabaseManager.shared.client
-                .functions
-                .invoke("edit-event", options: FunctionInvokeOptions(body: body))
+            let response: EventRPCResponse = try await SupabaseManager.shared.client
+                .rpc("edit_event_rpc", params: params)
+                .execute()
+                .value
 
             successTrigger &+= 1
             await onSaved(response.event)
             dismiss()
-        } catch FunctionsError.httpError(let code, let data) {
-            errorMessage = Self.decodeFunctionError(data) ?? "HTTP \(code)"
+        } catch let error as PostgrestError {
+            errorMessage = error.message
         } catch {
             errorMessage = error.localizedDescription
         }

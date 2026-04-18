@@ -263,19 +263,27 @@ struct BranchEditorView: View {
                     .font(.footnote)
             }
 
-        case .edit:
-            Section("Ca mặc định") {
+        case .edit(let branch):
+            Section("Ca làm") {
                 if shifts.isEmpty {
                     Text("Chưa có ca làm nào cho chi nhánh này.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Ca", selection: $defaultShiftId) {
+                    Picker("Ca mặc định", selection: $defaultShiftId) {
                         Text("Không").tag(UUID?.none)
                         ForEach(shifts) { shift in
                             Text(shift.label).tag(UUID?.some(shift.id))
                         }
                     }
+                }
+
+                NavigationLink {
+                    ShiftsManagementView(branch: branch) {
+                        await loadShifts(branchId: branch.id)
+                    }
+                } label: {
+                    Label("Quản lý ca & giờ làm", systemImage: "clock.arrow.circlepath")
                 }
             }
         }
@@ -389,10 +397,13 @@ struct BranchEditorView: View {
         guard lat.isFinite, lng.isFinite else { return false }
 
         if case .create = mode {
-            // Shifts are optional, but if present they must all be named.
+            // Shifts are optional, but if present they must all be named and
+            // apply to at least one weekday.
             for draft in shiftDrafts {
                 let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !name.isEmpty else { return false }
+                guard !draft.daysOfWeek.isEmpty else { return false }
+                guard draft.end > draft.start else { return false }
             }
             // WiFi BSSIDs must be non-empty if the row exists.
             for draft in wifiDrafts {
@@ -500,22 +511,23 @@ struct BranchEditorView: View {
                     startLocal: Self.timeFormatter.string(from: draft.start),
                     endLocal: Self.timeFormatter.string(from: draft.end),
                     graceMin: draft.graceMin,
-                    isDefault: draft.isDefault
+                    isDefault: draft.isDefault,
+                    daysOfWeek: Array(draft.daysOfWeek).sorted()
                 )
             }
+            // Postgres does NOT guarantee the RETURNING order matches the
+            // input order on a bulk INSERT. Return the `is_default` column
+            // alongside `id` so we can pick the right row regardless of
+            // order. Only one row is marked default (we enforce this in the
+            // draft model) so `first(where:)` lands on the right shift.
             let inserted: [ShiftInsertResponse] = try await SupabaseManager.shared.client
                 .from("shifts")
                 .insert(rows)
-                .select("id")
+                .select("id, is_default")
                 .execute()
                 .value
 
-            // Match inserted ids back to the draft marked as default (order is
-            // preserved by Postgres on bulk insert).
-            if let defaultIdx = shiftDrafts.firstIndex(where: { $0.isDefault }),
-               inserted.indices.contains(defaultIdx) {
-                insertedDefaultShiftId = inserted[defaultIdx].id
-            }
+            insertedDefaultShiftId = inserted.first(where: { $0.isDefault })?.id
         }
 
         // WiFi: branch_id + bssid, optional ssid; drop blanks.
@@ -632,6 +644,7 @@ struct ShiftDraft: Identifiable, Hashable {
     var end: Date
     var graceMin: Int
     var isDefault: Bool
+    var daysOfWeek: Set<Int>
 
     static func empty() -> ShiftDraft {
         ShiftDraft(
@@ -640,7 +653,8 @@ struct ShiftDraft: Identifiable, Hashable {
             start: dateAt(hour: 8, minute: 0),
             end: dateAt(hour: 17, minute: 0),
             graceMin: 15,
-            isDefault: false
+            isDefault: false,
+            daysOfWeek: [1, 2, 3, 4, 5]
         )
     }
 
@@ -651,7 +665,8 @@ struct ShiftDraft: Identifiable, Hashable {
             start: dateAt(hour: 8, minute: 0),
             end: dateAt(hour: 17, minute: 0),
             graceMin: 15,
-            isDefault: true
+            isDefault: true,
+            daysOfWeek: [1, 2, 3, 4, 5]
         )
     }
 
@@ -707,8 +722,46 @@ private struct ShiftDraftRow: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
+
+            WeekdayPicker(selection: $draft.daysOfWeek)
         }
         .padding(.vertical, 4)
+    }
+}
+
+private struct WeekdayPicker: View {
+    @Binding var selection: Set<Int>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(Weekday.allCases) { day in
+                    Button {
+                        if selection.contains(day.rawValue) {
+                            selection.remove(day.rawValue)
+                        } else {
+                            selection.insert(day.rawValue)
+                        }
+                    } label: {
+                        Text(day.shortLabel)
+                            .font(.caption.weight(.semibold))
+                            .frame(width: 34, height: 28)
+                            .foregroundStyle(selection.contains(day.rawValue) ? Color.white : Color.primary)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(selection.contains(day.rawValue)
+                                          ? Color.accentColor
+                                          : Color(.tertiarySystemGroupedBackground))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(day.fullLabel)
+                }
+            }
+            Text("Áp dụng: \(Array(selection).sorted().weekdaySummary)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -792,6 +845,7 @@ private struct ShiftInsert: Encodable, Sendable {
     let endLocal: String
     let graceMin: Int
     let isDefault: Bool
+    let daysOfWeek: [Int]
 
     enum CodingKeys: String, CodingKey {
         case branchId = "branch_id"
@@ -800,11 +854,18 @@ private struct ShiftInsert: Encodable, Sendable {
         case endLocal = "end_local"
         case graceMin = "grace_min"
         case isDefault = "is_default"
+        case daysOfWeek = "days_of_week"
     }
 }
 
 private struct ShiftInsertResponse: Decodable, Sendable {
     let id: UUID
+    let isDefault: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case isDefault = "is_default"
+    }
 }
 
 private struct CreateBranchResult: Decodable, Sendable {

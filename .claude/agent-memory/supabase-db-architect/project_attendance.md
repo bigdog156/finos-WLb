@@ -24,13 +24,16 @@ Project ref: `destaoobmomlzhxfiamv`
 - 0015_distance_m — ADD COLUMN distance_m DOUBLE PRECISION to attendance_events (nullable; NULL on historical rows)
 - 0016_absent_cron — pg_cron extension; mark_absent_yesterday() function; cron job 'mark-absent-yesterday' at '0 2 * * *'
 - 0017_profiles_self_signup_insert — INSERT policy for self-signup flow; audit_table_change() converted to SECURITY DEFINER
+- 0018_fix_leave_requests_rls_manager_401 — Rewrote all leave_requests RLS policies to use user_role()/user_branch() SECURITY DEFINER helpers; dropped raw EXISTS(SELECT FROM profiles) which caused infinite RLS recursion
 
 ## Edge Functions
-- `check-in` version 3 (verify_jwt=true) — GPS + WiFi BSSID risk scoring, impossible travel detection; now persists distance_m on all insert paths and selects it back
-- `review-event` version 1 (verify_jwt=true)
-- `create-user` version 1 (verify_jwt=true) — admin-only invite flow; inviteUserByEmail + profile insert + audit_log write; returns { user_id, email }; 409 on duplicate email
+- `check-in` version 5 (verify_jwt=true) — GPS + WiFi BSSID risk scoring, impossible travel detection; extractSub() replaces userClient.auth.getUser() (same fix as review-leave v2)
+- `review-leave` version 3 (verify_jwt=true) — fixed base64url padding bug in extractSub() (pad === 2 → '==', pad === 3 → '=', pad === 1 → null); v2 had unpadded atob() which threw on all real JWTs; other 4 EFs already had correct padding via '='.repeat((4 - len % 4) % 4)
+- `review-event` version 2 (verify_jwt=true) — extractSub() replaces userClient.auth.getUser()
+- `edit-event` version 2 (verify_jwt=true) — extractSub() replaces userClient.auth.getUser()
+- `create-user` version 2 (verify_jwt=true) — extractSub() replaces userClient.auth.getUser(); dropped anon client entirely; admin-only invite flow; inviteUserByEmail + profile insert + audit_log write; returns { user_id, email }; 409 on duplicate email
 - Self-signup flow added 2026-04-17: auth.signUp() → upsertSelfProfile() in AuthStore.swift; email confirmation is OFF on this project (users auto-confirmed at creation); session exists immediately after signUp so client-side profile upsert runs
-- `export-report` version 1 (verify_jwt=true) — admin/manager CSV export; queries attendance_days+profiles+branches+departments; uploads to reports bucket via service_role; returns { signed_url, filename, row_count, expires_at }; managers forced to their branch_id
+- `export-report` version 2 (verify_jwt=true) — admin/manager CSV export; extractSub() replaces userClient.auth.getUser(); single DB query with !inner embed + .eq("branch_id") at top level + .eq("employee.dept_id") through embed; no in-memory fallback filtering; SUPABASE_ANON_KEY dropped entirely; storagePath uses userId from extractSub; managers forced to their branch_id
 
 ## Known acceptable security advisor warnings
 - `extension_in_public:postgis` — PostGIS installed in public schema (intentional)

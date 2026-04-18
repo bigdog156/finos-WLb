@@ -124,11 +124,7 @@ struct ExportSheet: View {
         state = .generating
         do {
             let response: ExportReportResponse = try await SupabaseManager.shared.client
-                .functions
-                .invoke(
-                    "export-report",
-                    options: FunctionInvokeOptions(body: requestBody)
-                )
+                .invokeFunction("export-report", body: requestBody)
 
             guard let remoteURL = URL(string: response.signedUrl) else {
                 throw ExportError.invalidURL
@@ -144,11 +140,14 @@ struct ExportSheet: View {
                 filename: response.filename,
                 rowCount: response.rowCount
             )
-        } catch let FunctionsError.httpError(_, data) {
-            let detail = ExportSheet.extractDetail(data)
-                ?? "Máy chủ không thể tạo tệp xuất."
-            state = .failed(message: detail)
-            alertError = detail
+        } catch let InvokeError.edgeFunctionError(_, code, detail) {
+            let message = detail ?? code ?? "Máy chủ không thể tạo tệp xuất."
+            state = .failed(message: message)
+            alertError = message
+        } catch InvokeError.noSession {
+            let msg = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+            state = .failed(message: msg)
+            alertError = msg
         } catch {
             let msg = error.localizedDescription
             state = .failed(message: msg)

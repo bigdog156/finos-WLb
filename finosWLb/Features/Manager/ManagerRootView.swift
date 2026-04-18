@@ -11,8 +11,8 @@ struct ManagerRootView: View {
             NavigationStack { ManagerReviewQueue() }
                 .tabItem { Label("Duyệt", systemImage: "checkmark.shield") }
 
-            NavigationStack { ManagerLeaveReviewView() }
-                .tabItem { Label("Nghỉ phép", systemImage: "sun.max.circle") }
+            NavigationStack { ManagerRequestsRootView() }
+                .tabItem { Label("Đơn từ", systemImage: "tray.and.arrow.down") }
 
             NavigationStack { ManagerReportsView() }
                 .tabItem { Label("Báo cáo", systemImage: "chart.bar") }

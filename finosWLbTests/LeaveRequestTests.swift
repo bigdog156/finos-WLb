@@ -82,6 +82,32 @@ struct LeaveRequestTests {
         #expect(req.durationDays == 3)
     }
 
+    @Test("Decodes PostgREST timestamp with microseconds + TZ offset")
+    func decodesTimestampWithMicros() throws {
+        // This is the exact shape PostgREST emits for `timestamptz` — fractional
+        // microseconds and a "+00:00" offset. `created_at` is a String in our
+        // model so this must decode even with supabase-swift's default
+        // .iso8601 date strategy.
+        let json = #"""
+        {
+          "id": "07cda734-1970-4f89-9331-63c3a05e1500",
+          "employee_id": "3964ace6-aca8-41c8-a8f8-c98b7d39c54c",
+          "branch_id": "670a708c-3110-4464-b809-8789edc634d5",
+          "kind": "annual",
+          "start_date": "2026-04-18",
+          "end_date": "2026-04-18",
+          "reason": "Về quê",
+          "status": "pending",
+          "reviewed_by": null,
+          "reviewed_at": null,
+          "review_note": null,
+          "created_at": "2026-04-18T02:38:08.982591+00:00"
+        }
+        """#.data(using: .utf8)!
+        let req = try JSONDecoder().decode(LeaveRequest.self, from: json)
+        #expect(req.createdAt.hasPrefix("2026-04-18T02:38:08"))
+    }
+
     // MARK: - Helpers
 
     private func makeRequest(start: String, end: String) -> LeaveRequest {

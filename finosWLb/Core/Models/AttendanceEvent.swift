@@ -80,6 +80,48 @@ struct CheckInBody: Codable, Sendable {
     }
 }
 
+/// Params for the `check_in_rpc` Postgres function. Property names match
+/// the `p_*` argument names because PostgREST's RPC call encodes the
+/// Encodable struct as the JSON body and looks up args by name.
+struct CheckInRPCParams: Encodable, Sendable {
+    let p_type: String
+    let p_client_ts: String
+    let p_lat: Double
+    let p_lng: Double
+    let p_accuracy_m: Double
+    let p_bssid: String?
+    let p_ssid: String?
+    let p_note: String?
+}
+
+/// Params for the `review_event_rpc` Postgres function.
+struct ReviewEventRPCParams: Encodable, Sendable {
+    let p_event_id: UUID
+    let p_new_status: String
+    let p_note: String?
+}
+
+/// Wrapper response for RPCs that return `{ "event": {...} }`.
+struct EventRPCResponse: Decodable, Sendable {
+    let event: AttendanceEvent
+}
+
+/// Shape returned by `check_in_rpc`. `rejected` mirrors the old 422
+/// semantics — the row still gets written but with status=rejected so the
+/// audit trail stays complete.
+struct CheckInRPCResponse: Codable, Sendable {
+    let event: AttendanceEvent
+    let distanceM: Int
+    let radiusM: Int
+    let rejected: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case event, rejected
+        case distanceM = "distance_m"
+        case radiusM = "radius_m"
+    }
+}
+
 /// Shape of the `check-in` Edge Function's non-422 error responses, e.g.
 /// `{ "error": "no_branch_assigned" }` or
 /// `{ "error": "bad_request", "detail": "invalid accuracy_m" }`.

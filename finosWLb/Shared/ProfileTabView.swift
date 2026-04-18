@@ -264,7 +264,7 @@ struct ProfileTabView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-        } else if isLoading && profile.branchId != nil || profile.deptId != nil {
+        } else if isLoading && (profile.branchId != nil || profile.deptId != nil) {
             LabeledContent(title) {
                 if isLoading { ProgressView() } else { Text(placeholder).foregroundStyle(.secondary) }
             }

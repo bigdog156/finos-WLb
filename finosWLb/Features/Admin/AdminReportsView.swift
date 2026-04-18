@@ -461,7 +461,7 @@ struct AdminReportsView: View {
     private var monthView: some View {
         if isLoading && monthSeries.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if monthSeries.isEmpty {
+        } else if !isLoading && monthSeries.isEmpty {
             ContentUnavailableView(
                 "Không có dữ liệu cho tháng này",
                 systemImage: "calendar",

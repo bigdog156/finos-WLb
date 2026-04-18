@@ -148,6 +148,13 @@ struct ReviewLeaveResponse: Decodable, Sendable {
     let leave: LeaveRequest
 }
 
+/// Params for the `review_leave_rpc` Postgres function.
+struct ReviewLeaveRPCParams: Encodable, Sendable {
+    let p_request_id: UUID
+    let p_new_status: String
+    let p_note: String?
+}
+
 struct EditEventBody: Encodable, Sendable {
     let eventId: UUID
     let newStatus: String?
@@ -164,4 +171,12 @@ struct EditEventBody: Encodable, Sendable {
 
 struct EditEventResponse: Decodable, Sendable {
     let event: AttendanceEvent
+}
+
+/// Params for the `edit_event_rpc` Postgres function.
+struct EditEventRPCParams: Encodable, Sendable {
+    let p_event_id: UUID
+    let p_new_status: String?
+    let p_new_server_ts: String?
+    let p_reason: String
 }
