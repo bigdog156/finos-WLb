@@ -6,6 +6,33 @@
 - **Bundle id:** `vietmind.finosWLb`
 - **Ngôn ngữ UI:** Tiếng Việt
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="20%">
+      <img src="images-demo/IMG_5061.PNG" alt="Màn hình chấm công — chưa vào ca" /><br/>
+      <sub><b>Nhân viên · Hôm nay</b><br/>Chưa vào ca, sẵn sàng chấm công vào</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="images-demo/IMG_5063.PNG" alt="Màn hình chấm công — đang làm việc, có thông tin ca" /><br/>
+      <sub><b>Nhân viên · Đang trong ca</b><br/>Hiển thị ca làm việc + thời gian đã làm</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="images-demo/IMG_5064.PNG" alt="Lịch sử chấm công dạng calendar" /><br/>
+      <sub><b>Nhân viên · Lịch sử</b><br/>Calendar view với chú thích trạng thái</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="images-demo/IMG_5062.PNG" alt="Hồ sơ nhân viên" /><br/>
+      <sub><b>Nhân viên · Hồ sơ</b><br/>Chi nhánh, phòng ban, cài đặt bảo mật</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="images-demo/IMG_5059.PNG" alt="Dashboard quản trị viên" /><br/>
+      <sub><b>Quản trị · Dashboard</b><br/>KPI hôm nay + shortcut quản lý</sub>
+    </td>
+  </tr>
+</table>
+
 ## Tech stack
 
 | Lớp | Công nghệ |
