@@ -42,24 +42,24 @@ struct UserEditorView: View {
 
     var body: some View {
         Form {
-            Section("Identity") {
-                TextField("Full name", text: $fullName)
+            Section("Danh tính") {
+                TextField("Họ và tên", text: $fullName)
                     .textInputAutocapitalization(.words)
             }
 
             Section {
-                Picker("Role", selection: $role) {
+                Picker("Vai trò", selection: $role) {
                     ForEach(UserRole.allCases, id: \.self) { r in
-                        Text(r.rawValue.capitalized).tag(r)
+                        Text(roleLabel(r)).tag(r)
                     }
                 }
                 .pickerStyle(.segmented)
                 .disabled(isSelfEdit)
             } header: {
-                Text("Role")
+                Text("Vai trò")
             } footer: {
                 if isSelfEdit {
-                    Text("You can't change your own role.")
+                    Text("Bạn không thể thay đổi vai trò của chính mình.")
                 }
             }
 
@@ -67,22 +67,22 @@ struct UserEditorView: View {
                 branchMenu
                 departmentMenu
             } header: {
-                Text("Assignment")
+                Text("Phân công")
             } footer: {
                 if role != .admin && branchId == nil {
-                    Text("Managers and employees must be assigned to a branch.")
+                    Text("Quản lý và nhân viên phải được phân công vào một chi nhánh.")
                         .foregroundStyle(.red)
                 }
             }
 
             Section {
-                Toggle("Active", isOn: $active)
+                Toggle("Hoạt động", isOn: $active)
                     .disabled(isSelfEdit)
             } header: {
-                Text("Status")
+                Text("Trạng thái")
             } footer: {
                 if isSelfEdit {
-                    Text("You can't deactivate your own account.")
+                    Text("Bạn không thể vô hiệu hóa tài khoản của chính mình.")
                 }
             }
 
@@ -92,13 +92,13 @@ struct UserEditorView: View {
                         active = false
                         Task { await save() }
                     } label: {
-                        Text("Deactivate user")
+                        Text("Vô hiệu hóa người dùng")
                     }
                     .disabled(isSaving)
                 } header: {
-                    Text("Danger zone")
+                    Text("Vùng nguy hiểm")
                 } footer: {
-                    Text("Deactivated users can no longer sign in. Reactivate them anytime.")
+                    Text("Người dùng bị vô hiệu hóa không thể đăng nhập. Bạn có thể kích hoạt lại bất cứ lúc nào.")
                 }
             }
 
@@ -120,7 +120,7 @@ struct UserEditorView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Text("Save").fontWeight(.semibold)
+                        Text("Lưu").fontWeight(.semibold)
                     }
                 }
                 .disabled(!isValid || !hasChanges || isSaving)
@@ -140,7 +140,7 @@ struct UserEditorView: View {
             Button {
                 branchId = nil
             } label: {
-                Label("None", systemImage: branchId == nil ? "checkmark" : "")
+                Label("Không", systemImage: branchId == nil ? "checkmark" : "")
             }
             Divider()
             ForEach(branches) { b in
@@ -152,7 +152,7 @@ struct UserEditorView: View {
             }
         } label: {
             HStack {
-                Text("Branch")
+                Text("Chi nhánh")
                 Spacer()
                 Text(branchLabel).foregroundStyle(.secondary)
             }
@@ -165,7 +165,7 @@ struct UserEditorView: View {
             Button {
                 deptId = nil
             } label: {
-                Label("None", systemImage: deptId == nil ? "checkmark" : "")
+                Label("Không", systemImage: deptId == nil ? "checkmark" : "")
             }
             Divider()
             ForEach(departments) { d in
@@ -177,7 +177,7 @@ struct UserEditorView: View {
             }
         } label: {
             HStack {
-                Text("Department")
+                Text("Phòng ban")
                 Spacer()
                 Text(deptLabel).foregroundStyle(.secondary)
             }
@@ -189,14 +189,22 @@ struct UserEditorView: View {
         if let id = branchId, let b = branches.first(where: { $0.id == id }) {
             return b.name
         }
-        return "None"
+        return "Không"
     }
 
     private var deptLabel: String {
         if let id = deptId, let d = departments.first(where: { $0.id == id }) {
             return d.name
         }
-        return "None"
+        return "Không"
+    }
+
+    private func roleLabel(_ role: UserRole) -> String {
+        switch role {
+        case .admin: return "Quản trị viên"
+        case .manager: return "Quản lý"
+        case .employee: return "Nhân viên"
+        }
     }
 
     // MARK: - Derived
@@ -240,11 +248,11 @@ struct UserEditorView: View {
             do {
                 let remaining = try await countOtherActiveAdmins()
                 if remaining == 0 {
-                    errorMessage = "You can't deactivate or demote the last active admin."
+                    errorMessage = "Bạn không thể vô hiệu hóa hoặc hạ cấp quản trị viên hoạt động cuối cùng."
                     return
                 }
             } catch {
-                errorMessage = "Couldn't verify admin count: \(error.localizedDescription)"
+                errorMessage = "Không thể xác minh số quản trị viên: \(error.localizedDescription)"
                 return
             }
         }

@@ -26,7 +26,7 @@ struct InviteUserView: View {
         NavigationStack {
             Form {
                 Section("Email") {
-                    TextField("name@example.com", text: $email)
+                    TextField("ten@vidu.com", text: $email)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -38,26 +38,26 @@ struct InviteUserView: View {
                     }
                 }
 
-                Section("Identity") {
-                    TextField("Full name", text: $fullName)
+                Section("Danh tính") {
+                    TextField("Họ và tên", text: $fullName)
                         .textInputAutocapitalization(.words)
                         .textContentType(.name)
                 }
 
-                Section("Role") {
-                    Picker("Role", selection: $role) {
+                Section("Vai trò") {
+                    Picker("Vai trò", selection: $role) {
                         ForEach(UserRole.allCases, id: \.self) { r in
-                            Text(r.rawValue.capitalized).tag(r)
+                            Text(roleLabel(r)).tag(r)
                         }
                     }
                     .pickerStyle(.segmented)
                 }
 
-                Section("Assignment") {
+                Section("Phân công") {
                     branchMenu
                     departmentMenu
                     if role != .admin, branchId == nil {
-                        Text("Branch is required for managers and employees.")
+                        Text("Chi nhánh là bắt buộc đối với quản lý và nhân viên.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -71,11 +71,11 @@ struct InviteUserView: View {
                     }
                 }
             }
-            .navigationTitle("Invite user")
+            .navigationTitle("Mời người dùng")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Hủy") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -84,7 +84,7 @@ struct InviteUserView: View {
                         if isSubmitting {
                             ProgressView()
                         } else {
-                            Text("Send invite").fontWeight(.semibold)
+                            Text("Gửi lời mời").fontWeight(.semibold)
                         }
                     }
                     .disabled(!canSubmit || isSubmitting)
@@ -100,7 +100,7 @@ struct InviteUserView: View {
             Button {
                 branchId = nil
             } label: {
-                Label("None", systemImage: branchId == nil ? "checkmark" : "")
+                Label("Không", systemImage: branchId == nil ? "checkmark" : "")
             }
             Divider()
             ForEach(branches) { b in
@@ -112,7 +112,7 @@ struct InviteUserView: View {
             }
         } label: {
             HStack {
-                Text("Branch")
+                Text("Chi nhánh")
                 Spacer()
                 Text(branchLabel)
                     .foregroundStyle(.secondary)
@@ -126,7 +126,7 @@ struct InviteUserView: View {
             Button {
                 deptId = nil
             } label: {
-                Label("None", systemImage: deptId == nil ? "checkmark" : "")
+                Label("Không", systemImage: deptId == nil ? "checkmark" : "")
             }
             Divider()
             ForEach(departments) { d in
@@ -138,7 +138,7 @@ struct InviteUserView: View {
             }
         } label: {
             HStack {
-                Text("Department")
+                Text("Phòng ban")
                 Spacer()
                 Text(deptLabel)
                     .foregroundStyle(.secondary)
@@ -151,14 +151,22 @@ struct InviteUserView: View {
         if let id = branchId, let b = branches.first(where: { $0.id == id }) {
             return b.name
         }
-        return "None"
+        return "Không"
     }
 
     private var deptLabel: String {
         if let id = deptId, let d = departments.first(where: { $0.id == id }) {
             return d.name
         }
-        return "None"
+        return "Không"
+    }
+
+    private func roleLabel(_ role: UserRole) -> String {
+        switch role {
+        case .admin: return "Quản trị viên"
+        case .manager: return "Quản lý"
+        case .employee: return "Nhân viên"
+        }
     }
 
     // MARK: - Derived
@@ -200,12 +208,12 @@ struct InviteUserView: View {
         } catch let FunctionsError.httpError(code, data) where code == 409 {
             if let decoded = try? JSONDecoder().decode(InviteUserErrorResponse.self, from: data),
                decoded.error == "email_exists" {
-                emailError = "Email already in use."
+                emailError = "Email đã được sử dụng."
             } else {
-                emailError = "Email already in use."
+                emailError = "Email đã được sử dụng."
             }
         } catch let FunctionsError.httpError(code, _) where code == 403 {
-            generalError = "You don't have permission to invite users."
+            generalError = "Bạn không có quyền mời người dùng."
         } catch {
             generalError = error.localizedDescription
         }

@@ -19,6 +19,7 @@ struct EmployeeDayDetailView: View {
     @State private var events: [AttendanceEvent] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var editingEvent: AttendanceEvent?
 
     var body: some View {
         List(events) { event in
@@ -41,21 +42,45 @@ struct EmployeeDayDetailView: View {
                 StatusBadge(status: event.status)
             }
             .padding(.vertical, 2)
+            .contextMenu {
+                Button {
+                    editingEvent = event
+                } label: {
+                    Label("Sửa sự kiện", systemImage: "pencil")
+                }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button {
+                    editingEvent = event
+                } label: {
+                    Label("Sửa", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
+        }
+        .sheet(item: $editingEvent) { event in
+            EditEventSheet(event: event) { updated in
+                if let idx = events.firstIndex(where: { $0.id == updated.id }) {
+                    events[idx] = updated
+                } else {
+                    await load()
+                }
+            }
         }
         .overlay {
             if isLoading && events.isEmpty {
                 ProgressView()
             } else if events.isEmpty, let errorMessage {
                 ContentUnavailableView(
-                    "Couldn't load events",
+                    "Không thể tải sự kiện",
                     systemImage: "exclamationmark.triangle",
                     description: Text(errorMessage)
                 )
             } else if events.isEmpty {
                 ContentUnavailableView(
-                    "No events",
+                    "Không có sự kiện",
                     systemImage: "calendar",
-                    description: Text("\(fullName) has no recorded events for this day.")
+                    description: Text("\(fullName) không có sự kiện nào được ghi nhận trong ngày này.")
                 )
             }
         }
@@ -87,7 +112,7 @@ struct EmployeeDayDetailView: View {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: date)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
-            errorMessage = "Invalid date window"
+            errorMessage = "Khoảng thời gian không hợp lệ"
             return
         }
         let startISO = ISO8601DateFormatter.supabase.string(from: start)

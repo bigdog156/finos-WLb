@@ -23,10 +23,10 @@ struct AdminDashboardView: View {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .today:     "Today"
-            case .sevenDay:  "7d"
-            case .thirtyDay: "30d"
-            case .custom:    "Custom"
+            case .today:     "Hôm nay"
+            case .sevenDay:  "7 ngày"
+            case .thirtyDay: "30 ngày"
+            case .custom:    "Tùy chỉnh"
             }
         }
     }
@@ -55,11 +55,11 @@ struct AdminDashboardView: View {
 
     var body: some View {
         content
-            .navigationTitle("Dashboard")
+            .navigationTitle("Tổng quan")
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
-                        Text("Dashboard").font(.headline)
+                        Text("Tổng quan").font(.headline)
                         Text(Self.subtitleFormatter.string(from: Date()))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -82,11 +82,11 @@ struct AdminDashboardView: View {
     private var content: some View {
         if let errorMessage, today == nil {
             ContentUnavailableView {
-                Label("Couldn't load dashboard", systemImage: "exclamationmark.triangle")
+                Label("Không thể tải bảng tổng quan", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(errorMessage)
             } actions: {
-                Button("Try again") { Task { await load() } }
+                Button("Thử lại") { Task { await load() } }
                     .buttonStyle(.borderedProminent)
             }
         } else if today == nil && isLoading {
@@ -100,9 +100,9 @@ struct AdminDashboardView: View {
             }
         } else if let today, today.totalEmployees == 0 {
             ContentUnavailableView(
-                "No employees yet",
+                "Chưa có nhân viên",
                 systemImage: "person.3",
-                description: Text("Invite employees from Admin → Users to populate the dashboard.")
+                description: Text("Mời nhân viên từ Quản trị → Người dùng để điền dữ liệu vào bảng.")
             )
         } else {
             ScrollView {
@@ -135,7 +135,7 @@ struct AdminDashboardView: View {
 
     private var rangeBar: some View {
         HStack(spacing: 8) {
-            Picker("Range", selection: $rangePreset) {
+            Picker("Khoảng", selection: $rangePreset) {
                 ForEach(RangePreset.allCases) { p in
                     Text(p.label).tag(p)
                 }
@@ -155,20 +155,20 @@ struct AdminDashboardView: View {
     private var customRangeSheet: some View {
         NavigationStack {
             Form {
-                DatePicker("From",
+                DatePicker("Từ",
                            selection: $customFrom,
                            in: ...Date(),
                            displayedComponents: .date)
-                DatePicker("To",
+                DatePicker("Đến",
                            selection: $customTo,
                            in: customFrom...Date(),
                            displayedComponents: .date)
             }
-            .navigationTitle("Custom range")
+            .navigationTitle("Khoảng tùy chỉnh")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("Hủy") {
                         showingCustomSheet = false
                         // Revert to the last non-custom preset — otherwise
                         // the picker is stuck on "Custom" with no applied range.
@@ -176,7 +176,7 @@ struct AdminDashboardView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button("Áp dụng") {
                         showingCustomSheet = false
                         Task { await load() }
                     }
@@ -191,11 +191,11 @@ struct AdminDashboardView: View {
     @ViewBuilder
     private func kpiStrip(_ t: DashboardToday) -> some View {
         let tiles: [(String, Int, String, Color)] = [
-            ("Employees", t.totalEmployees, "person.3",         .blue),
-            ("Present",   t.present,        "checkmark.circle", .green),
-            ("Late",      t.late,           "clock",            .orange),
-            ("Flagged",   t.flagged,        "flag.fill",        .yellow),
-            ("Absent",    t.absent,         "person.slash",     .gray),
+            ("Nhân viên", t.totalEmployees, "person.3",         .blue),
+            ("Có mặt",    t.present,        "checkmark.circle", .green),
+            ("Trễ",       t.late,           "clock",            .orange),
+            ("Gắn cờ",    t.flagged,        "flag.fill",        .yellow),
+            ("Vắng",      t.absent,         "person.slash",     .gray),
         ]
         if hSizeClass == .regular {
             HStack(spacing: 12) {
@@ -227,7 +227,7 @@ struct AdminDashboardView: View {
                     selectedDeptId = nil
                 } label: {
                     Label(
-                        "All departments",
+                        "Tất cả phòng ban",
                         systemImage: selectedDeptId == nil ? "checkmark" : ""
                     )
                 }
@@ -243,7 +243,7 @@ struct AdminDashboardView: View {
                     }
                 }
             } label: {
-                Label("Department", systemImage: "line.3.horizontal.decrease.circle")
+                Label("Phòng ban", systemImage: "line.3.horizontal.decrease.circle")
             }
         }
     }
@@ -260,36 +260,36 @@ struct AdminDashboardView: View {
                 ForEach(series) { row in
                     if let d = row.parsedDate {
                         BarMark(
-                            x: .value("Day", d, unit: .day),
-                            y: .value("On time", row.onTime)
+                            x: .value("Ngày", d, unit: .day),
+                            y: .value("Đúng giờ", row.onTime)
                         )
-                        .foregroundStyle(by: .value("Status", "On time"))
+                        .foregroundStyle(by: .value("Trạng thái", "Đúng giờ"))
 
                         BarMark(
-                            x: .value("Day", d, unit: .day),
-                            y: .value("Late", row.late)
+                            x: .value("Ngày", d, unit: .day),
+                            y: .value("Trễ", row.late)
                         )
-                        .foregroundStyle(by: .value("Status", "Late"))
+                        .foregroundStyle(by: .value("Trạng thái", "Trễ"))
 
                         BarMark(
-                            x: .value("Day", d, unit: .day),
-                            y: .value("Flagged", row.flagged)
+                            x: .value("Ngày", d, unit: .day),
+                            y: .value("Gắn cờ", row.flagged)
                         )
-                        .foregroundStyle(by: .value("Status", "Flagged"))
+                        .foregroundStyle(by: .value("Trạng thái", "Gắn cờ"))
 
                         BarMark(
-                            x: .value("Day", d, unit: .day),
-                            y: .value("Absent", row.absent)
+                            x: .value("Ngày", d, unit: .day),
+                            y: .value("Vắng", row.absent)
                         )
-                        .foregroundStyle(by: .value("Status", "Absent"))
+                        .foregroundStyle(by: .value("Trạng thái", "Vắng"))
                     }
                 }
             }
             .chartForegroundStyleScale([
-                "On time": Color.green,
-                "Late":    Color.orange,
-                "Flagged": Color.yellow,
-                "Absent":  Color.gray.opacity(0.5),
+                "Đúng giờ": Color.green,
+                "Trễ":      Color.orange,
+                "Gắn cờ":   Color.yellow,
+                "Vắng":     Color.gray.opacity(0.5),
             ])
             .chartLegend(position: .bottom)
             .chartXAxis {
@@ -322,7 +322,7 @@ struct AdminDashboardView: View {
                 }
             }
             .frame(height: 240)
-            .accessibilityLabel("\(chartTitle) attendance breakdown by status. Double tap a bar to drill into that day.")
+            .accessibilityLabel("\(chartTitle) thống kê chấm công theo trạng thái. Nhấn đúp vào một cột để xem chi tiết ngày đó.")
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -330,10 +330,10 @@ struct AdminDashboardView: View {
 
     private var chartTitle: String {
         switch rangePreset {
-        case .today:     "Today"
-        case .sevenDay:  "Last 7 days"
-        case .thirtyDay: "Last 30 days"
-        case .custom:    "Custom range"
+        case .today:     "Hôm nay"
+        case .sevenDay:  "7 ngày gần nhất"
+        case .thirtyDay: "30 ngày gần nhất"
+        case .custom:    "Khoảng tùy chỉnh"
         }
     }
 
@@ -353,7 +353,7 @@ struct AdminDashboardView: View {
     private var branchBreakdown: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("By branch").font(.headline)
+                Text("Theo chi nhánh").font(.headline)
                 Spacer()
             }
 
@@ -383,7 +383,7 @@ struct AdminDashboardView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(kpi.branchName).font(.subheadline).fontWeight(.semibold)
-                Text("P \(kpi.present) · L \(kpi.late) · A \(kpi.absent)")
+                Text("CM \(kpi.present) · T \(kpi.late) · V \(kpi.absent)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -405,7 +405,7 @@ struct AdminDashboardView: View {
         // iOS 17+ Table with sortable columns. Columns are simple readable
         // fields; the sparkline column renders the mini chart inline.
         Table(byBranch) {
-            TableColumn("Name") { row in
+            TableColumn("Tên") { row in
                 NavigationLink {
                     AdminBranchDetailView(kpi: row)
                 } label: {
@@ -413,14 +413,14 @@ struct AdminDashboardView: View {
                 }
                 .buttonStyle(.plain)
             }
-            TableColumn("Present rate") { row in
+            TableColumn("Tỷ lệ có mặt") { row in
                 Text(presentRate(row))
                     .monospacedDigit()
             }
-            TableColumn("Flagged") { row in
+            TableColumn("Gắn cờ") { row in
                 Text("\(row.flagged)").monospacedDigit()
             }
-            TableColumn("Last 14d") { row in
+            TableColumn("14 ngày gần nhất") { row in
                 sparkline(for: row).frame(width: 88, height: 22)
             }
         }
@@ -443,8 +443,8 @@ struct AdminDashboardView: View {
                 ForEach(data) { row in
                     if let d = row.parsedDate {
                         LineMark(
-                            x: .value("Day", d),
-                            y: .value("Rate", onTimeRate(row))
+                            x: .value("Ngày", d),
+                            y: .value("Tỷ lệ", onTimeRate(row))
                         )
                         .interpolationMethod(.monotone)
                         .foregroundStyle(Color.accentColor)
@@ -473,9 +473,9 @@ struct AdminDashboardView: View {
 
     private func sparkAccessibility(for kpi: BranchKPI) -> String {
         let data = sparkByBranch[kpi.branchId] ?? []
-        guard let last = data.last else { return "No sparkline data" }
+        guard let last = data.last else { return "Không có dữ liệu biểu đồ mini" }
         let rate = Int((onTimeRate(last) * 100).rounded())
-        return "\(kpi.branchName), last 14 days on-time rate ending at \(rate) percent"
+        return "\(kpi.branchName), tỷ lệ đúng giờ 14 ngày gần nhất kết thúc ở \(rate) phần trăm"
     }
 
     // MARK: - Skeletons (initial load)
@@ -643,22 +643,22 @@ struct AdminBranchDetailView: View {
                     columns: [GridItem](repeating: .init(.flexible(), spacing: 12), count: 3),
                     spacing: 12
                 ) {
-                    KPITile(title: "Total",   value: kpi.total,   systemImage: "person.3",          tint: .blue)
-                    KPITile(title: "Present", value: kpi.present, systemImage: "checkmark.circle",  tint: .green)
-                    KPITile(title: "Late",    value: kpi.late,    systemImage: "clock",             tint: .orange)
-                    KPITile(title: "Flagged", value: kpi.flagged, systemImage: "flag.fill",         tint: .yellow)
-                    KPITile(title: "Absent",  value: kpi.absent,  systemImage: "person.slash",      tint: .gray)
+                    KPITile(title: "Tổng",    value: kpi.total,   systemImage: "person.3",          tint: .blue)
+                    KPITile(title: "Có mặt",  value: kpi.present, systemImage: "checkmark.circle",  tint: .green)
+                    KPITile(title: "Trễ",     value: kpi.late,    systemImage: "clock",             tint: .orange)
+                    KPITile(title: "Gắn cờ",  value: kpi.flagged, systemImage: "flag.fill",         tint: .yellow)
+                    KPITile(title: "Vắng",    value: kpi.absent,  systemImage: "person.slash",      tint: .gray)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Last 14 days").font(.headline)
+                    Text("14 ngày gần nhất").font(.headline)
                     if isLoading && series.isEmpty {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color.secondary.opacity(0.12))
                             .frame(height: 220)
                     } else if let errorMessage, series.isEmpty {
                         ContentUnavailableView(
-                            "Couldn't load",
+                            "Không thể tải",
                             systemImage: "exclamationmark.triangle",
                             description: Text(errorMessage)
                         )
@@ -679,22 +679,22 @@ struct AdminBranchDetailView: View {
         Chart {
             ForEach(series) { row in
                 if let d = row.parsedDate {
-                    BarMark(x: .value("Day", d, unit: .day), y: .value("On time", row.onTime))
-                        .foregroundStyle(by: .value("Status", "On time"))
-                    BarMark(x: .value("Day", d, unit: .day), y: .value("Late", row.late))
-                        .foregroundStyle(by: .value("Status", "Late"))
-                    BarMark(x: .value("Day", d, unit: .day), y: .value("Flagged", row.flagged))
-                        .foregroundStyle(by: .value("Status", "Flagged"))
-                    BarMark(x: .value("Day", d, unit: .day), y: .value("Absent", row.absent))
-                        .foregroundStyle(by: .value("Status", "Absent"))
+                    BarMark(x: .value("Ngày", d, unit: .day), y: .value("Đúng giờ", row.onTime))
+                        .foregroundStyle(by: .value("Trạng thái", "Đúng giờ"))
+                    BarMark(x: .value("Ngày", d, unit: .day), y: .value("Trễ", row.late))
+                        .foregroundStyle(by: .value("Trạng thái", "Trễ"))
+                    BarMark(x: .value("Ngày", d, unit: .day), y: .value("Gắn cờ", row.flagged))
+                        .foregroundStyle(by: .value("Trạng thái", "Gắn cờ"))
+                    BarMark(x: .value("Ngày", d, unit: .day), y: .value("Vắng", row.absent))
+                        .foregroundStyle(by: .value("Trạng thái", "Vắng"))
                 }
             }
         }
         .chartForegroundStyleScale([
-            "On time": Color.green,
-            "Late":    Color.orange,
-            "Flagged": Color.yellow,
-            "Absent":  Color.gray.opacity(0.5),
+            "Đúng giờ": Color.green,
+            "Trễ":      Color.orange,
+            "Gắn cờ":   Color.yellow,
+            "Vắng":     Color.gray.opacity(0.5),
         ])
         .chartLegend(position: .bottom)
         .frame(height: 220)

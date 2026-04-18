@@ -8,7 +8,9 @@ import SwiftData
 
 @main
 struct finosWLbApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var auth = AuthStore()
+    @State private var lock = BiometricLock()
 
     let modelContainer: ModelContainer = {
         let schema = Schema([PendingCheckIn.self])
@@ -24,7 +26,13 @@ struct finosWLbApp: App {
         WindowGroup {
             RootView()
                 .environment(auth)
+                .environment(lock)
         }
         .modelContainer(modelContainer)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                lock.lock()
+            }
+        }
     }
 }

@@ -9,10 +9,10 @@ struct AdminRootView: View {
     var body: some View {
         TabView {
             NavigationStack { AdminSettingsList() }
-                .tabItem { Label("Admin", systemImage: "gearshape") }
+                .tabItem { Label("Quản trị", systemImage: "gearshape") }
 
             NavigationStack { ProfileTabView(profile: profile) }
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tabItem { Label("Hồ sơ", systemImage: "person.crop.circle") }
         }
     }
 }
@@ -27,7 +27,7 @@ private struct AdminSettingsList: View {
                     BranchesListView()
                 } label: {
                     SettingsRow(
-                        title: "Branches",
+                        title: "Chi nhánh",
                         systemImage: "building.2",
                         tint: .blue
                     )
@@ -36,7 +36,7 @@ private struct AdminSettingsList: View {
                     AdminUsersView()
                 } label: {
                     SettingsRow(
-                        title: "Users",
+                        title: "Người dùng",
                         systemImage: "person.3",
                         tint: .indigo
                     )
@@ -45,7 +45,7 @@ private struct AdminSettingsList: View {
                     DepartmentsView()
                 } label: {
                     SettingsRow(
-                        title: "Departments",
+                        title: "Phòng ban",
                         systemImage: "rectangle.3.group",
                         tint: .teal
                     )
@@ -57,7 +57,7 @@ private struct AdminSettingsList: View {
                     AdminReportsView()
                 } label: {
                     SettingsRow(
-                        title: "Reports",
+                        title: "Báo cáo",
                         systemImage: "doc.text.magnifyingglass",
                         tint: .purple
                     )
@@ -66,7 +66,7 @@ private struct AdminSettingsList: View {
                     AuditLogView()
                 } label: {
                     SettingsRow(
-                        title: "Audit Log",
+                        title: "Nhật ký kiểm toán",
                         systemImage: "doc.text.magnifyingglass",
                         tint: .gray
                     )
@@ -75,14 +75,14 @@ private struct AdminSettingsList: View {
                     AdminDashboardView()
                 } label: {
                     SettingsRow(
-                        title: "Dashboard",
+                        title: "Tổng quan",
                         systemImage: "chart.pie",
                         tint: .orange
                     )
                 }
             }
         }
-        .navigationTitle("Admin")
+        .navigationTitle("Quản trị")
     }
 }
 

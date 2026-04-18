@@ -9,9 +9,9 @@ enum ReportScope: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .day:   "Day"
-        case .week:  "Week"
-        case .month: "Month"
+        case .day:   "Ngày"
+        case .week:  "Tuần"
+        case .month: "Tháng"
         }
     }
 
@@ -31,13 +31,13 @@ struct ScopePicker: View {
     @Binding var scope: ReportScope
 
     var body: some View {
-        Picker("Scope", selection: $scope) {
+        Picker("Phạm vi", selection: $scope) {
             ForEach(ReportScope.allCases) { s in
                 Text(s.label).tag(s)
             }
         }
         .pickerStyle(.segmented)
-        .accessibilityLabel("Report scope")
+        .accessibilityLabel("Phạm vi báo cáo")
     }
 }
 

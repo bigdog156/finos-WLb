@@ -34,8 +34,8 @@ struct TimezonePickerView: View {
                 }
             }
         }
-        .searchable(text: $search, prompt: "Search time zones")
-        .navigationTitle("Time Zone")
+        .searchable(text: $search, prompt: "Tìm múi giờ")
+        .navigationTitle("Múi giờ")
         .navigationBarTitleDisplayMode(.inline)
     }
 

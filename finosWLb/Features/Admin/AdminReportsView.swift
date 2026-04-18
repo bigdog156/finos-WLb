@@ -38,7 +38,7 @@ struct AdminReportsView: View {
 
     var body: some View {
         content
-            .navigationTitle("Reports")
+            .navigationTitle("Báo cáo")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     exportMenu
@@ -124,7 +124,7 @@ struct AdminReportsView: View {
                 Button {
                     selectedBranchId = nil
                 } label: {
-                    Label("All branches", systemImage: selectedBranchId == nil ? "checkmark" : "")
+                    Label("Tất cả chi nhánh", systemImage: selectedBranchId == nil ? "checkmark" : "")
                 }
                 Divider()
                 ForEach(branches) { b in
@@ -137,7 +137,7 @@ struct AdminReportsView: View {
             } label: {
                 chipLabel(
                     icon: "building.2",
-                    text: selectedBranchId.flatMap { id in branches.first { $0.id == id }?.name } ?? "All branches",
+                    text: selectedBranchId.flatMap { id in branches.first { $0.id == id }?.name } ?? "Tất cả chi nhánh",
                     isActive: selectedBranchId != nil
                 )
             }
@@ -150,7 +150,7 @@ struct AdminReportsView: View {
                         .padding(4)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear branch filter")
+                .accessibilityLabel("Xóa bộ lọc chi nhánh")
             }
         }
     }
@@ -161,7 +161,7 @@ struct AdminReportsView: View {
                 Button {
                     selectedDeptId = nil
                 } label: {
-                    Label("All departments", systemImage: selectedDeptId == nil ? "checkmark" : "")
+                    Label("Tất cả phòng ban", systemImage: selectedDeptId == nil ? "checkmark" : "")
                 }
                 Divider()
                 ForEach(departments) { d in
@@ -174,7 +174,7 @@ struct AdminReportsView: View {
             } label: {
                 chipLabel(
                     icon: "rectangle.3.group",
-                    text: selectedDeptId.flatMap { id in departments.first { $0.id == id }?.name } ?? "All depts",
+                    text: selectedDeptId.flatMap { id in departments.first { $0.id == id }?.name } ?? "Tất cả phòng ban",
                     isActive: selectedDeptId != nil
                 )
             }
@@ -187,7 +187,7 @@ struct AdminReportsView: View {
                         .padding(4)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear department filter")
+                .accessibilityLabel("Xóa bộ lọc phòng ban")
             }
         }
     }
@@ -216,13 +216,13 @@ struct AdminReportsView: View {
             Button {
                 showExportSheet = true
             } label: {
-                Label("Export CSV…", systemImage: "square.and.arrow.down")
+                Label("Xuất CSV…", systemImage: "square.and.arrow.down")
             }
             ShareLink(item: shareSummary) {
-                Label("Share summary", systemImage: "text.bubble")
+                Label("Chia sẻ tóm tắt", systemImage: "text.bubble")
             }
         } label: {
-            Label("Export", systemImage: "square.and.arrow.up")
+            Label("Xuất", systemImage: "square.and.arrow.up")
         }
     }
 
@@ -234,9 +234,9 @@ struct AdminReportsView: View {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if dayRows.isEmpty {
             ContentUnavailableView(
-                "No attendance for this day",
+                "Không có chấm công cho ngày này",
                 systemImage: "calendar",
-                description: Text("Try a different date or clear filters.")
+                description: Text("Thử ngày khác hoặc xóa bộ lọc.")
             )
         } else {
             List {
@@ -287,10 +287,10 @@ struct AdminReportsView: View {
         let outStr = row.lastOut.flatMap(parseTime) ?? "—"
         var parts = ["\(inStr) – \(outStr)"]
         if let worked = row.workedMin {
-            parts.append("worked \(hm(worked))")
+            parts.append("làm \(hm(worked))")
         }
         if let ot = row.overtimeMin, ot > 0 {
-            parts.append("OT \(hm(ot))")
+            parts.append("TC \(hm(ot))")
         }
         return parts.joined(separator: " · ")
     }
@@ -308,7 +308,7 @@ struct AdminReportsView: View {
     private func hm(_ minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
-        return "\(h)h \(String(format: "%02d", m))m"
+        return "\(h)h \(String(format: "%02d", m))p"
     }
 
     private func initials(from name: String) -> String {
@@ -324,9 +324,9 @@ struct AdminReportsView: View {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if weekProfiles.isEmpty {
             ContentUnavailableView(
-                "No employees",
+                "Không có nhân viên",
                 systemImage: "person.2",
-                description: Text("Adjust your filters or assign employees.")
+                description: Text("Điều chỉnh bộ lọc hoặc phân công nhân viên.")
             )
         } else {
             ScrollView {
@@ -463,9 +463,9 @@ struct AdminReportsView: View {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if monthSeries.isEmpty {
             ContentUnavailableView(
-                "No data for this month",
+                "Không có dữ liệu cho tháng này",
                 systemImage: "calendar",
-                description: Text("Try a different month or clear filters.")
+                description: Text("Thử tháng khác hoặc xóa bộ lọc.")
             )
         } else {
             ScrollView {
@@ -488,7 +488,7 @@ struct AdminReportsView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                ForEach(["S","M","T","W","T","F","S"], id: \.self) { letter in
+                ForEach(["CN","T2","T3","T4","T5","T6","T7"], id: \.self) { letter in
                     Text(letter).font(.caption2).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                 }
@@ -504,7 +504,7 @@ struct AdminReportsView: View {
                     monthCell(day)
                 }
             }
-            Text("Tint = attendance rate (present / total)")
+            Text("Màu = tỷ lệ chấm công (có mặt / tổng)")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -537,7 +537,7 @@ struct AdminReportsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(day.formatted(date: .abbreviated, time: .omitted)), attendance \(Int(rate * 100))%"
+            "\(day.formatted(date: .abbreviated, time: .omitted)), chấm công \(Int(rate * 100))%"
         )
     }
 
@@ -556,9 +556,9 @@ struct AdminReportsView: View {
 
     private var exportTitle: String {
         switch scope {
-        case .day:   "Daily report"
-        case .week:  "Weekly report"
-        case .month: "Monthly report"
+        case .day:   "Báo cáo ngày"
+        case .week:  "Báo cáo tuần"
+        case .month: "Báo cáo tháng"
         }
     }
 
@@ -567,8 +567,8 @@ struct AdminReportsView: View {
         let fmt = DateFormatter()
         fmt.dateStyle = .medium
         let range = "\(fmt.string(from: from)) – \(fmt.string(from: to))"
-        let branch = selectedBranchId.flatMap { id in branches.first { $0.id == id }?.name } ?? "All branches"
-        let dept = selectedDeptId.flatMap { id in departments.first { $0.id == id }?.name } ?? "All depts"
+        let branch = selectedBranchId.flatMap { id in branches.first { $0.id == id }?.name } ?? "Tất cả chi nhánh"
+        let dept = selectedDeptId.flatMap { id in departments.first { $0.id == id }?.name } ?? "Tất cả phòng ban"
         return "\(range) · \(branch) · \(dept)"
     }
 
@@ -578,23 +578,23 @@ struct AdminReportsView: View {
             let counts = Dictionary(grouping: dayRows, by: \.status).mapValues(\.count)
             let date = anchorDate.formatted(date: .complete, time: .omitted)
             return """
-            Attendance — \(date)
-            On time: \(counts[.onTime] ?? 0)
-            Late: \(counts[.late] ?? 0)
-            Flagged: \(counts[.flagged] ?? 0)
-            Absent: \(counts[.absent] ?? 0)
+            Chấm công — \(date)
+            Đúng giờ: \(counts[.onTime] ?? 0)
+            Trễ: \(counts[.late] ?? 0)
+            Gắn cờ: \(counts[.flagged] ?? 0)
+            Vắng: \(counts[.absent] ?? 0)
             """
         case .week:
             let late = weekEvents.filter { $0.status == .late }.count
             let flagged = weekEvents.filter { $0.status == .flagged }.count
-            return "Week of \(DateScopeStepper.startOfWeek(anchorDate).formatted(date: .abbreviated, time: .omitted))\nLate: \(late)  Flagged: \(flagged)  Total events: \(weekEvents.count)"
+            return "Tuần bắt đầu \(DateScopeStepper.startOfWeek(anchorDate).formatted(date: .abbreviated, time: .omitted))\nTrễ: \(late)  Gắn cờ: \(flagged)  Tổng sự kiện: \(weekEvents.count)"
         case .month:
             let on = monthSeries.reduce(0) { $0 + $1.onTime }
             let late = monthSeries.reduce(0) { $0 + $1.late }
             let flag = monthSeries.reduce(0) { $0 + $1.flagged }
             let abs = monthSeries.reduce(0) { $0 + $1.absent }
             let mo = anchorDate.formatted(.dateTime.month(.wide).year())
-            return "Attendance — \(mo)\nOn time: \(on)\nLate: \(late)\nFlagged: \(flag)\nAbsent: \(abs)"
+            return "Chấm công — \(mo)\nĐúng giờ: \(on)\nTrễ: \(late)\nGắn cờ: \(flag)\nVắng: \(abs)"
         }
     }
 
@@ -782,23 +782,23 @@ enum WeekCellStatus: Hashable {
 
     var label: String {
         switch self {
-        case .onTime:    "On time"
-        case .late:      "Late"
-        case .flagged:   "Flagged"
-        case .rejected:  "Rejected"
-        case .absent:    "Absent"
-        case .future:    "Upcoming"
-        case .none:      "No data"
+        case .onTime:    "Đúng giờ"
+        case .late:      "Trễ"
+        case .flagged:   "Gắn cờ"
+        case .rejected:  "Bị từ chối"
+        case .absent:    "Vắng"
+        case .future:    "Sắp tới"
+        case .none:      "Không có dữ liệu"
         }
     }
 
     var shortLabel: String {
         switch self {
-        case .onTime:    "on-time"
-        case .late:      "late"
-        case .flagged:   "flagged"
-        case .rejected:  "rejected"
-        case .absent:    "absent"
+        case .onTime:    "đúng giờ"
+        case .late:      "trễ"
+        case .flagged:   "gắn cờ"
+        case .rejected:  "bị từ chối"
+        case .absent:    "vắng"
         case .future:    "—"
         case .none:      "—"
         }

@@ -6,13 +6,16 @@ struct EmployeeRootView: View {
     var body: some View {
         TabView {
             NavigationStack { TodayView() }
-                .tabItem { Label("Today", systemImage: "clock.badge.checkmark") }
+                .tabItem { Label("Hôm nay", systemImage: "clock.badge.checkmark") }
 
             NavigationStack { EmployeeHistoryView() }
-                .tabItem { Label("History", systemImage: "list.bullet.rectangle") }
+                .tabItem { Label("Lịch sử", systemImage: "list.bullet.rectangle") }
+
+            NavigationStack { EmployeeLeavesView(profile: profile) }
+                .tabItem { Label("Nghỉ phép", systemImage: "sun.max") }
 
             NavigationStack { ProfileTabView(profile: profile) }
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tabItem { Label("Hồ sơ", systemImage: "person.crop.circle") }
         }
     }
 }

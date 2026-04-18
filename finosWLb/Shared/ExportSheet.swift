@@ -33,7 +33,7 @@ struct ExportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Summary") {
+                Section("Tóm tắt") {
                     Text(title).font(.headline)
                     Text(summary)
                         .font(.subheadline)
@@ -46,12 +46,12 @@ struct ExportSheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Label(filename, systemImage: "doc.text")
                                 .font(.subheadline)
-                            Text("\(rowCount) row\(rowCount == 1 ? "" : "s")")
+                            Text("\(rowCount) dòng")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         ShareLink(item: url) {
-                            Label("Share CSV", systemImage: "square.and.arrow.up")
+                            Label("Chia sẻ CSV", systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -63,7 +63,7 @@ struct ExportSheet: View {
                         Button {
                             Task { await generate() }
                         } label: {
-                            Label("Try again", systemImage: "arrow.clockwise")
+                            Label("Thử lại", systemImage: "arrow.clockwise")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -72,7 +72,7 @@ struct ExportSheet: View {
                         Button {
                             Task { await generate() }
                         } label: {
-                            Label("Generate CSV", systemImage: "doc.badge.plus")
+                            Label("Tạo CSV", systemImage: "doc.badge.plus")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -80,7 +80,7 @@ struct ExportSheet: View {
                     case .generating:
                         HStack {
                             ProgressView()
-                            Text("Generating…")
+                            Text("Đang tạo…")
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -88,7 +88,7 @@ struct ExportSheet: View {
                     case .downloading(let filename):
                         HStack {
                             ProgressView()
-                            Text("Downloading \(filename)…")
+                            Text("Đang tải \(filename)…")
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -96,15 +96,15 @@ struct ExportSheet: View {
                     }
                 }
             }
-            .navigationTitle("Export CSV")
+            .navigationTitle("Xuất CSV")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Đóng") { dismiss() }
                 }
             }
             .alert(
-                "Export failed",
+                "Xuất thất bại",
                 isPresented: Binding(
                     get: { alertError != nil },
                     set: { if !$0 { alertError = nil } }
@@ -146,7 +146,7 @@ struct ExportSheet: View {
             )
         } catch let FunctionsError.httpError(_, data) {
             let detail = ExportSheet.extractDetail(data)
-                ?? "The server couldn't generate your export."
+                ?? "Máy chủ không thể tạo tệp xuất."
             state = .failed(message: detail)
             alertError = detail
         } catch {
@@ -195,8 +195,8 @@ struct ExportSheet: View {
         case badStatus(Int)
         var errorDescription: String? {
             switch self {
-            case .invalidURL:       "The server returned an invalid download URL."
-            case .badStatus(let c): "Download failed (HTTP \(c))."
+            case .invalidURL:       "Máy chủ trả về đường dẫn tải không hợp lệ."
+            case .badStatus(let c): "Tải xuống thất bại (HTTP \(c))."
             }
         }
     }
@@ -204,8 +204,8 @@ struct ExportSheet: View {
 
 #Preview {
     ExportSheet(
-        title: "Weekly report",
-        summary: "~120 rows · Mar 3 – Mar 9 · All branches",
+        title: "Báo cáo tuần",
+        summary: "~120 dòng · 3 Mar – 9 Mar · Tất cả chi nhánh",
         requestBody: ExportReportBody(
             reportType: "weekly",
             from: "2026-03-03",

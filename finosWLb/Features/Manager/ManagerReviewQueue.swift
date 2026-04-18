@@ -32,6 +32,11 @@ struct ManagerReviewQueue: View {
     @State private var channel: RealtimeChannelV2?
     @State private var realtimeTask: Task<Void, Never>?
 
+    // Haptic triggers: bumped on successful submit / error so views can
+    // fire sensoryFeedback off MainActor state changes.
+    @State private var successTrigger = 0
+    @State private var errorTrigger = 0
+
     var body: some View {
         List {
             ForEach(sortedEvents) { event in
@@ -40,6 +45,27 @@ struct ManagerReviewQueue: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(.init(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .transition(transition)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            Task { await submit(event: event, newStatus: .onTime, note: nil) }
+                        } label: {
+                            Label("Đúng giờ", systemImage: "checkmark.seal.fill")
+                        }
+                        .tint(.green)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            Task { await submit(event: event, newStatus: .rejected, note: nil) }
+                        } label: {
+                            Label("Từ chối", systemImage: "xmark.octagon.fill")
+                        }
+                        Button {
+                            Task { await submit(event: event, newStatus: .late, note: nil) }
+                        } label: {
+                            Label("Trễ", systemImage: "clock.badge.exclamationmark")
+                        }
+                        .tint(.orange)
+                    }
             }
         }
         .listStyle(.plain)
@@ -51,28 +77,28 @@ struct ManagerReviewQueue: View {
                     Button {
                         sortMode = .newestFirst
                     } label: {
-                        Label("Newest first",
+                        Label("Mới nhất trước",
                               systemImage: sortMode == .newestFirst ? "checkmark" : "clock")
                     }
                     Button {
                         sortMode = .highestRiskFirst
                     } label: {
-                        Label("Highest risk first",
+                        Label("Rủi ro cao nhất trước",
                               systemImage: sortMode == .highestRiskFirst ? "checkmark" : "exclamationmark.triangle")
                     }
                 } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                    Label("Sắp xếp", systemImage: "arrow.up.arrow.down")
                 }
             }
         }
         .overlay { overlay }
-        .navigationTitle("Review")
+        .navigationTitle("Duyệt")
         .sheet(item: $pendingAction) { action in
             decisionSheet(for: action)
                 .presentationDetents([.height(220), .medium])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Couldn't apply decision",
+        .alert("Không thể áp dụng quyết định",
                isPresented: Binding(
                 get: { actionError != nil },
                 set: { if !$0 { actionError = nil } }
@@ -89,6 +115,8 @@ struct ManagerReviewQueue: View {
             stopRealtime()
         }
         .refreshable { await load() }
+        .sensoryFeedback(.success, trigger: successTrigger)
+        .sensoryFeedback(.error, trigger: errorTrigger)
     }
 
     // MARK: - Card
@@ -96,7 +124,7 @@ struct ManagerReviewQueue: View {
     private func reviewCard(_ event: FlaggedEvent) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text(nameCache[event.employeeId] ?? "Loading…")
+                Text(nameCache[event.employeeId] ?? "Đang tải…")
                     .font(.headline)
                 Spacer()
                 Text(relativeTime(event.serverTs))
@@ -104,7 +132,7 @@ struct ManagerReviewQueue: View {
                     .foregroundStyle(.secondary)
             }
 
-            Label(event.flaggedReason ?? "Flagged for review",
+            Label(event.flaggedReason ?? "Bị gắn cờ để duyệt",
                   systemImage: "flag.fill")
                 .foregroundStyle(.yellow)
                 .font(.subheadline.weight(.medium))
@@ -128,7 +156,7 @@ struct ManagerReviewQueue: View {
     private func riskRow(_ event: FlaggedEvent) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Gauge(value: Double(event.riskScore), in: 0...100) {
-                Text("Risk")
+                Text("Rủi ro")
             } currentValueLabel: {
                 Text("\(event.riskScore)")
             }
@@ -151,7 +179,7 @@ struct ManagerReviewQueue: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Label(event.bssid != nil ? "Wi-Fi" : "No Wi-Fi",
+                Label(event.bssid != nil ? "Có WiFi" : "Không WiFi",
                       systemImage: "wifi")
                     .labelStyle(.titleAndIcon)
                     .font(.caption)
@@ -165,7 +193,7 @@ struct ManagerReviewQueue: View {
             Button {
                 pendingAction = PendingAction(event: event, newStatus: .onTime)
             } label: {
-                Text("On time")
+                Text("Đúng giờ")
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
@@ -174,7 +202,7 @@ struct ManagerReviewQueue: View {
             Button {
                 pendingAction = PendingAction(event: event, newStatus: .late)
             } label: {
-                Text("Late")
+                Text("Trễ")
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
@@ -183,7 +211,7 @@ struct ManagerReviewQueue: View {
             Button {
                 pendingAction = PendingAction(event: event, newStatus: .rejected)
             } label: {
-                Text("Reject")
+                Text("Từ chối")
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
@@ -196,7 +224,7 @@ struct ManagerReviewQueue: View {
     private func decisionSheet(for action: PendingAction) -> some View {
         DecisionSheet(
             action: action,
-            employeeName: nameCache[action.event.employeeId] ?? "this employee"
+            employeeName: nameCache[action.event.employeeId] ?? "nhân viên này"
         ) { note in
             pendingAction = nil
             await submit(event: action.event,
@@ -215,15 +243,15 @@ struct ManagerReviewQueue: View {
             ProgressView()
         } else if let errorMessage, events.isEmpty {
             ContentUnavailableView(
-                "Couldn't load review queue",
+                "Không thể tải hàng đợi duyệt",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
             )
         } else if events.isEmpty {
             ContentUnavailableView(
-                "All clear",
+                "Đã duyệt xong",
                 systemImage: "checkmark.seal.fill",
-                description: Text("Nothing flagged — everyone checked in cleanly.")
+                description: Text("Không có gì bị gắn cờ — mọi người đã chấm công sạch.")
             )
         }
     }
@@ -329,11 +357,14 @@ struct ManagerReviewQueue: View {
             withAnimation(reduceMotion ? .default : .spring(response: 0.4)) {
                 events.removeAll { $0.id == event.id }
             }
+            successTrigger &+= 1
         } catch FunctionsError.httpError(let code, let data) {
             let message = decodeFunctionError(data) ?? "HTTP \(code)"
             actionError = message
+            errorTrigger &+= 1
         } catch {
             actionError = error.localizedDescription
+            errorTrigger &+= 1
         }
     }
 
@@ -437,25 +468,25 @@ private struct DecisionSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Decision") {
-                    LabeledContent("Employee", value: employeeName)
-                    LabeledContent("Change to", value: action.newStatus.label)
+                Section("Quyết định") {
+                    LabeledContent("Nhân viên", value: employeeName)
+                    LabeledContent("Chuyển thành", value: action.newStatus.label)
                 }
-                Section("Note (optional)") {
-                    TextField("Why? (seen by audit log)",
+                Section("Ghi chú (tùy chọn)") {
+                    TextField("Tại sao? (sẽ hiển thị trong nhật ký kiểm toán)",
                               text: $note,
                               axis: .vertical)
                         .lineLimit(1...4)
                 }
             }
-            .navigationTitle("Review event")
+            .navigationTitle("Duyệt sự kiện")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button("Hủy", action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Confirm") {
+                    Button("Xác nhận") {
                         let capturedNote = note
                         Task { await onConfirm(capturedNote) }
                     }
@@ -481,9 +512,9 @@ enum ReviewStatus: String, Hashable {
 
     var label: String {
         switch self {
-        case .onTime:   "On time"
-        case .late:     "Late"
-        case .rejected: "Rejected"
+        case .onTime:   "Đúng giờ"
+        case .late:     "Trễ"
+        case .rejected: "Bị từ chối"
         }
     }
 
@@ -495,4 +526,3 @@ enum ReviewStatus: String, Hashable {
         }
     }
 }
-

@@ -48,7 +48,7 @@ struct ManagerBranchView: View {
             }
         }
         .listStyle(.plain)
-        .searchable(text: $search, prompt: "Search name")
+        .searchable(text: $search, prompt: "Tìm theo tên")
         .toolbar {
             if departments.count > 1 {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -56,7 +56,7 @@ struct ManagerBranchView: View {
                         Button {
                             selectedDeptId = nil
                         } label: {
-                            Label("All departments",
+                            Label("Tất cả phòng ban",
                                   systemImage: selectedDeptId == nil ? "checkmark" : "")
                         }
                         Divider()
@@ -69,18 +69,18 @@ struct ManagerBranchView: View {
                             }
                         }
                     } label: {
-                        Label("Department",
+                        Label("Phòng ban",
                               systemImage: "line.3.horizontal.decrease.circle")
                     }
                 }
             }
         }
         .overlay { overlay }
-        .navigationTitle("My Branch")
+        .navigationTitle("Chi nhánh của tôi")
         .toolbar {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 0) {
-                    Text("My Branch").font(.headline)
+                    Text("Chi nhánh của tôi").font(.headline)
                     Text(Self.headerDateFormatter.string(from: Date()))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -95,9 +95,9 @@ struct ManagerBranchView: View {
 
     private var summaryStrip: some View {
         HStack(spacing: 12) {
-            statTile(count: presentCount, label: "Present")
-            statTile(count: absentCount, label: "Absent")
-            statTile(count: flaggedCount, label: "Flagged")
+            statTile(count: presentCount, label: "Có mặt")
+            statTile(count: absentCount, label: "Vắng")
+            statTile(count: flaggedCount, label: "Gắn cờ")
         }
     }
 
@@ -129,12 +129,12 @@ struct ManagerBranchView: View {
             if row.flaggedCount > 0 {
                 Image(systemName: "flag.fill")
                     .foregroundStyle(.yellow)
-                    .accessibilityLabel("\(row.flaggedCount) flagged events")
+                    .accessibilityLabel("\(row.flaggedCount) sự kiện bị gắn cờ")
             }
             if row.hasLate {
                 Image(systemName: "clock.badge.exclamationmark")
                     .foregroundStyle(.orange)
-                    .accessibilityLabel("Was late")
+                    .accessibilityLabel("Đã trễ")
             }
 
             ManagerStatePill(state: row.derivedState)
@@ -161,15 +161,15 @@ struct ManagerBranchView: View {
             ProgressView()
         } else if let errorMessage, rows.isEmpty {
             ContentUnavailableView(
-                "Couldn't load today",
+                "Không thể tải hôm nay",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
             )
         } else if rows.isEmpty {
             ContentUnavailableView(
-                "No employees yet",
+                "Chưa có nhân viên",
                 systemImage: "person.2",
-                description: Text("Assign employees to this branch from Admin.")
+                description: Text("Phân công nhân viên vào chi nhánh này từ Quản trị.")
             )
         } else if filtered.isEmpty {
             // Search/filter miss — keep it lightweight; full-view empty states
@@ -200,7 +200,7 @@ struct ManagerBranchView: View {
     private func deptLabel(_ id: UUID) -> String {
         // We don't currently ship dept names with the view row — show a short
         // UUID prefix. Trivial to swap for a joined name in a future iteration.
-        "Dept " + String(id.uuidString.prefix(4))
+        "PB " + String(id.uuidString.prefix(4))
     }
 
     private var presentCount: Int {
@@ -218,9 +218,9 @@ struct ManagerBranchView: View {
         let inStr = row.firstIn.flatMap(parseTime)
         let outStr = row.lastOut.flatMap(parseTime)
         switch (inStr, outStr) {
-        case (nil, _):            return "Not in yet"
-        case (let i?, nil):       return "In \(i)"
-        case (let i?, let o?):    return "In \(i) · Out \(o)"
+        case (nil, _):            return "Chưa vào"
+        case (let i?, nil):       return "Vào \(i)"
+        case (let i?, let o?):    return "Vào \(i) · Ra \(o)"
         }
     }
 

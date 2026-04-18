@@ -57,7 +57,7 @@ struct DateScopeStepper: View {
                     .padding(.horizontal, 8)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Pick a date")
+            .accessibilityHint("Chọn một ngày")
 
             Spacer()
 
@@ -124,16 +124,16 @@ struct DateScopeStepper: View {
 
     private var previousLabel: String {
         switch scope {
-        case .day:   "Previous day"
-        case .week:  "Previous week"
-        case .month: "Previous month"
+        case .day:   "Ngày trước"
+        case .week:  "Tuần trước"
+        case .month: "Tháng trước"
         }
     }
     private var nextLabel: String {
         switch scope {
-        case .day:   "Next day"
-        case .week:  "Next week"
-        case .month: "Next month"
+        case .day:   "Ngày sau"
+        case .week:  "Tuần sau"
+        case .month: "Tháng sau"
         }
     }
 
@@ -144,18 +144,18 @@ struct DateScopeStepper: View {
         NavigationStack {
             Form {
                 DatePicker(
-                    "Date",
+                    "Ngày",
                     selection: $date,
                     in: ...Date(),
                     displayedComponents: .date
                 )
                 .datePickerStyle(.graphical)
             }
-            .navigationTitle("Pick date")
+            .navigationTitle("Chọn ngày")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showPicker = false }
+                    Button("Xong") { showPicker = false }
                 }
             }
         }

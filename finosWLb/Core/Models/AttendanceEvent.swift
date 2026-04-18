@@ -6,13 +6,13 @@ enum AttendanceEventType: String, Codable, Hashable, Sendable, CaseIterable {
 
     var label: String {
         switch self {
-        case .checkIn:  "Check In"
-        case .checkOut: "Check Out"
+        case .checkIn:  "Chấm công vào"
+        case .checkOut: "Chấm công ra"
         }
     }
 }
 
-enum AttendanceEventStatus: String, Codable, Hashable, Sendable {
+enum AttendanceEventStatus: String, Codable, Hashable, Sendable, CaseIterable {
     case onTime   = "on_time"
     case late
     case absent
@@ -21,11 +21,11 @@ enum AttendanceEventStatus: String, Codable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .onTime:   "On time"
-        case .late:     "Late"
-        case .absent:   "Absent"
-        case .flagged:  "Flagged"
-        case .rejected: "Rejected"
+        case .onTime:   "Đúng giờ"
+        case .late:     "Trễ"
+        case .absent:   "Vắng"
+        case .flagged:  "Gắn cờ"
+        case .rejected: "Bị từ chối"
         }
     }
 }
@@ -39,9 +39,10 @@ struct AttendanceEvent: Codable, Identifiable, Hashable, Sendable {
     let flaggedReason: String?
     let branchId: UUID?
     let accuracyM: Double?
+    let note: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, status
+        case id, type, status, note
         case serverTs = "server_ts"
         case clientTs = "client_ts"
         case flaggedReason = "flagged_reason"
@@ -70,9 +71,10 @@ struct CheckInBody: Codable, Sendable {
     let accuracyM: Double
     let bssid: String?
     let ssid: String?
+    let note: String?
 
     enum CodingKeys: String, CodingKey {
-        case type, lat, lng, bssid, ssid
+        case type, lat, lng, bssid, ssid, note
         case clientTs = "client_ts"
         case accuracyM = "accuracy_m"
     }

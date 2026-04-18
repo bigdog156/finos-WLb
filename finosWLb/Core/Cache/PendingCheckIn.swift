@@ -11,6 +11,7 @@ final class PendingCheckIn {
     var accuracyM: Double
     var bssid: String?
     var ssid: String?
+    var note: String?
     var createdAt: Date
     var attemptCount: Int
     var lastError: String?
@@ -23,7 +24,8 @@ final class PendingCheckIn {
         lng: Double,
         accuracyM: Double,
         bssid: String? = nil,
-        ssid: String? = nil
+        ssid: String? = nil,
+        note: String? = nil
     ) {
         self.id = id
         self.type = type
@@ -33,6 +35,7 @@ final class PendingCheckIn {
         self.accuracyM = accuracyM
         self.bssid = bssid
         self.ssid = ssid
+        self.note = note
         self.createdAt = Date()
         self.attemptCount = 0
         self.lastError = nil

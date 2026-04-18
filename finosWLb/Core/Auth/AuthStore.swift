@@ -35,7 +35,7 @@ final class AuthStore {
             let session = try await client.auth.signIn(email: email, password: password)
             try await loadProfile(userId: session.user.id)
         } catch {
-            state = .error(error.localizedDescription)
+            state = .error(Self.friendlyAuthMessage(error))
         }
     }
 
@@ -85,6 +85,42 @@ final class AuthStore {
                 active: false
             ))
             .execute()
+    }
+
+    /// Translates Supabase/Auth errors into user-facing copy. Never exposes
+    /// raw HTTP status codes or SDK jargon — the caller lands in the error
+    /// banner on the sign-in/up screen.
+    static func friendlyAuthMessage(_ error: Error) -> String {
+        let raw = error.localizedDescription.lowercased()
+
+        if raw.contains("invalid login") || raw.contains("invalid_credentials") || raw.contains("invalid grant") {
+            return "Email hoặc mật khẩu không đúng."
+        }
+        if raw.contains("email not confirmed") || raw.contains("email_not_confirmed") {
+            return "Vui lòng xác nhận email, sau đó thử lại."
+        }
+        if raw.contains("user already registered") || raw.contains("email_exists") || raw.contains("already been registered") {
+            return "Email này đã được đăng ký."
+        }
+        if raw.contains("password should be") || raw.contains("weak_password") {
+            return "Mật khẩu quá yếu. Vui lòng dùng ít nhất 6 ký tự."
+        }
+        if raw.contains("rate limit") || raw.contains("too many requests") {
+            return "Quá nhiều lần thử. Vui lòng chờ một chút rồi thử lại."
+        }
+        if raw.contains("network") || raw.contains("offline") || raw.contains("internet") {
+            return "Bạn đang ngoại tuyến. Kiểm tra kết nối và thử lại."
+        }
+        if raw.contains("timed out") || raw.contains("timeout") {
+            return "Yêu cầu đã hết thời gian. Vui lòng thử lại."
+        }
+        if raw.contains("403") || raw.contains("401") || raw.contains("unauthor") {
+            return "Không thể xác minh thông tin đăng nhập. Vui lòng thử lại."
+        }
+        if raw.contains("500") || raw.contains("502") || raw.contains("503") || raw.contains("504") {
+            return "Máy chủ đang gặp sự cố. Vui lòng thử lại sau giây lát."
+        }
+        return "Đã có lỗi xảy ra. Vui lòng thử lại."
     }
 }
 

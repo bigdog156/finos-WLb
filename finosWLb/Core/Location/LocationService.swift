@@ -11,11 +11,11 @@ final class LocationService: NSObject {
         var errorDescription: String? {
             switch self {
             case .permissionDenied:
-                "Location permission is required. Enable it in Settings."
+                "Cần cấp quyền truy cập vị trí. Vui lòng bật trong Cài đặt."
             case .locationUnavailable(let reason):
-                "Location unavailable: \(reason)"
+                "Không thể lấy vị trí: \(reason)"
             case .timeout:
-                "Couldn't get an accurate location. Try moving to a window."
+                "Không thể xác định vị trí chính xác. Hãy thử di chuyển đến gần cửa sổ."
             }
         }
     }

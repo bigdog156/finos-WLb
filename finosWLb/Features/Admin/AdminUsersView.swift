@@ -10,10 +10,10 @@ struct AdminUsersView: View {
 
         var label: String {
             switch self {
-            case .all: return "All"
-            case .admin: return "Admins"
-            case .manager: return "Managers"
-            case .employee: return "Employees"
+            case .all: return "Tất cả"
+            case .admin: return "Quản trị viên"
+            case .manager: return "Quản lý"
+            case .employee: return "Nhân viên"
             }
         }
     }
@@ -36,7 +36,7 @@ struct AdminUsersView: View {
     var body: some View {
         List {
             Section {
-                Picker("Role", selection: $roleFilter) {
+                Picker("Vai trò", selection: $roleFilter) {
                     ForEach(RoleFilter.allCases, id: \.self) { r in
                         Text(r.label).tag(r)
                     }
@@ -72,9 +72,9 @@ struct AdminUsersView: View {
                         Task { await toggleActive(profile) }
                     } label: {
                         if profile.active {
-                            Label("Deactivate", systemImage: "pause.circle")
+                            Label("Vô hiệu hóa", systemImage: "pause.circle")
                         } else {
-                            Label("Reactivate", systemImage: "play.circle")
+                            Label("Kích hoạt lại", systemImage: "play.circle")
                         }
                     }
                     .tint(profile.active ? .orange : .green)
@@ -90,8 +90,8 @@ struct AdminUsersView: View {
             }
         }
         .overlay { overlay }
-        .navigationTitle("Users")
-        .searchable(text: $search, prompt: "Search name")
+        .navigationTitle("Người dùng")
+        .searchable(text: $search, prompt: "Tìm theo tên")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -99,15 +99,15 @@ struct AdminUsersView: View {
                 } label: {
                     Image(systemName: "person.crop.circle.badge.plus")
                 }
-                .accessibilityLabel("Setup pending user")
+                .accessibilityLabel("Thiết lập người dùng đang chờ")
             }
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
-                    Section("Branch") {
+                    Section("Chi nhánh") {
                         Button {
                             branchFilter = nil
                         } label: {
-                            Label("All branches", systemImage: branchFilter == nil ? "checkmark" : "")
+                            Label("Tất cả chi nhánh", systemImage: branchFilter == nil ? "checkmark" : "")
                         }
                         ForEach(branches) { b in
                             Button {
@@ -118,11 +118,11 @@ struct AdminUsersView: View {
                         }
                     }
                     Divider()
-                    Toggle("Show inactive", isOn: $showInactive)
+                    Toggle("Hiển thị người ngừng hoạt động", isOn: $showInactive)
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                 }
-                .accessibilityLabel("Filters")
+                .accessibilityLabel("Bộ lọc")
             }
         }
         .sheet(isPresented: $showingSetup) {
@@ -133,7 +133,7 @@ struct AdminUsersView: View {
                 // Reload first (which clears banner), then set the success
                 // message so it survives until the next explicit reload.
                 await load()
-                banner = "Updated"
+                banner = "Đã cập nhật"
             }
         }
         .task { await load() }
@@ -144,46 +144,77 @@ struct AdminUsersView: View {
 
     private func row(_ profile: Profile) -> some View {
         HStack(spacing: 12) {
-            avatar(for: profile.fullName)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(profile.fullName).font(.headline)
+            avatar(for: profile.fullName, tint: roleTint(profile.role))
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(profile.fullName).font(.headline)
+                    rolePill(profile.role)
+                }
                 Text(subtitle(for: profile))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer()
             if !profile.active {
-                Text("Inactive")
+                Text("Ngừng hoạt động")
                     .font(.caption2.weight(.semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .background(.secondary.opacity(0.15), in: Capsule())
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .opacity(profile.active ? 1 : 0.5)
     }
 
-    private func avatar(for name: String) -> some View {
+    private func avatar(for name: String, tint: Color) -> some View {
         Circle()
-            .fill(Color.accentColor.opacity(0.15))
-            .frame(width: 36, height: 36)
+            .fill(tint.opacity(0.18))
+            .frame(width: 40, height: 40)
             .overlay {
                 Text(initials(from: name))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tint)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tint)
             }
     }
 
+    private func rolePill(_ role: UserRole) -> some View {
+        let tint = roleTint(role)
+        return Text(roleLabel(role))
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .foregroundStyle(tint)
+            .background(tint.opacity(0.15), in: Capsule())
+    }
+
+    private func roleTint(_ role: UserRole) -> Color {
+        switch role {
+        case .admin:    .purple
+        case .manager:  .blue
+        case .employee: .teal
+        }
+    }
+
     private func subtitle(for profile: Profile) -> String {
-        var parts: [String] = [profile.role.rawValue.capitalized]
+        var parts: [String] = []
         if let id = profile.branchId, let b = branches.first(where: { $0.id == id }) {
             parts.append(b.name)
         }
         if let id = profile.deptId, let d = departments.first(where: { $0.id == id }) {
             parts.append(d.name)
         }
+        if parts.isEmpty { return "Chưa phân công" }
         return parts.joined(separator: " · ")
+    }
+
+    private func roleLabel(_ role: UserRole) -> String {
+        switch role {
+        case .admin: return "Quản trị viên"
+        case .manager: return "Quản lý"
+        case .employee: return "Nhân viên"
+        }
     }
 
     private func initials(from name: String) -> String {
@@ -199,15 +230,15 @@ struct AdminUsersView: View {
             ProgressView()
         } else if let errorMessage, profiles.isEmpty {
             ContentUnavailableView(
-                "Couldn't load users",
+                "Không thể tải người dùng",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
             )
         } else if profiles.isEmpty {
             ContentUnavailableView(
-                "No users yet",
+                "Chưa có người dùng",
                 systemImage: "person.3",
-                description: Text("Tap + to invite the first user.")
+                description: Text("Nhấn + để mời người dùng đầu tiên.")
             )
         } else if filtered.isEmpty {
             ContentUnavailableView.search(text: search)

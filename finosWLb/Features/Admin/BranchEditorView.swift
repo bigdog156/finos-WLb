@@ -32,6 +32,10 @@ struct BranchEditorView: View {
     @State private var radiusMDouble: Double
     @State private var defaultShiftId: UUID?
 
+    // MARK: - Create-mode drafts
+    @State private var shiftDrafts: [ShiftDraft] = []
+    @State private var wifiDrafts: [WifiDraft] = []
+
     // MARK: - Map
     @State private var cameraPosition: MapCameraPosition
 
@@ -61,6 +65,7 @@ struct BranchEditorView: View {
             _lng = State(initialValue: defaultLng)
             _radiusMDouble = State(initialValue: 100)
             _defaultShiftId = State(initialValue: nil)
+            _shiftDrafts = State(initialValue: [ShiftDraft.defaultMorning()])
             _cameraPosition = State(initialValue: .region(
                 MKCoordinateRegion(
                     center: CLLocationCoordinate2D(latitude: defaultLat, longitude: defaultLng),
@@ -112,14 +117,14 @@ struct BranchEditorView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Text("Save").fontWeight(.semibold)
+                        Text("Lưu").fontWeight(.semibold)
                     }
                 }
                 .disabled(!isValid || isSaving)
             }
             if case .create = mode {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Hủy") { dismiss() }
                 }
             }
         }
@@ -130,17 +135,17 @@ struct BranchEditorView: View {
             }
         }
         .confirmationDialog(
-            "Delete branch?",
+            "Xóa chi nhánh?",
             isPresented: $showingDeleteConfirm,
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button("Xóa", role: .destructive) {
                 Task { await deleteBranch() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Hủy", role: .cancel) {}
         } message: {
             let count = assignedEmployeeCount ?? 0
-            Text("This will delete the branch. \(count) employee\(count == 1 ? "" : "s") assigned to it will become unassigned. Continue?")
+            Text("Thao tác này sẽ xóa chi nhánh. \(count) nhân viên thuộc chi nhánh sẽ bị bỏ phân công. Tiếp tục?")
         }
     }
 
@@ -148,15 +153,15 @@ struct BranchEditorView: View {
 
     @ViewBuilder
     private var detailsSection: some View {
-        Section("Details") {
-            TextField("Name", text: $name)
+        Section("Chi tiết") {
+            TextField("Tên", text: $name)
                 .textInputAutocapitalization(.words)
 
             NavigationLink {
                 TimezonePickerView(selection: $tz)
             } label: {
                 HStack {
-                    Text("Time zone")
+                    Text("Múi giờ")
                     Spacer()
                     Text(tz)
                         .foregroundStyle(.secondary)
@@ -165,20 +170,16 @@ struct BranchEditorView: View {
                 }
             }
 
-            TextField("Address (optional)", text: $address, axis: .vertical)
+            TextField("Địa chỉ (tùy chọn)", text: $address, axis: .vertical)
                 .lineLimit(1...3)
         }
     }
 
     @ViewBuilder
     private var locationSection: some View {
-        Section("Location") {
+        Section("Vị trí") {
             ZStack {
                 Map(position: $cameraPosition) {
-                    // No Marker here — the committed location is represented
-                    // by the screen-centered pin overlay below. Adding a
-                    // Marker would cause two pins to separate during pan and
-                    // snap back on release.
                     MapCircle(
                         center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                         radius: CLLocationDistance(radiusM)
@@ -195,8 +196,6 @@ struct BranchEditorView: View {
                     lng = c.longitude
                 }
 
-                // Center pin marker on top — visual affordance for the
-                // "drag map, pin stays centered" interaction.
                 Image(systemName: "mappin")
                     .font(.title2)
                     .foregroundStyle(.tint)
@@ -205,13 +204,13 @@ struct BranchEditorView: View {
             }
             .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
 
-            Text(String(format: "Lat: %.6f  Lng: %.6f", lat, lng))
+            Text(String(format: "Vĩ độ: %.6f  Kinh độ: %.6f", lat, lng))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Radius")
+                    Text("Bán kính")
                     Spacer()
                     Text("\(radiusM) m")
                         .font(.body.monospacedDigit())
@@ -224,7 +223,7 @@ struct BranchEditorView: View {
                 Task { await useCurrentLocation() }
             } label: {
                 HStack {
-                    Label("Use my current location", systemImage: "location")
+                    Label("Dùng vị trí hiện tại của tôi", systemImage: "location")
                     Spacer()
                     if isFetchingLocation { ProgressView() }
                 }
@@ -235,19 +234,44 @@ struct BranchEditorView: View {
 
     @ViewBuilder
     private var shiftSection: some View {
-        Section("Default shift") {
-            switch mode {
-            case .create:
-                Text("Choose after creating")
-                    .foregroundStyle(.secondary)
-            case .edit:
+        switch mode {
+        case .create:
+            Section {
+                ForEach($shiftDrafts) { $draft in
+                    ShiftDraftRow(draft: $draft) {
+                        remove(shift: draft.id)
+                    } setDefault: {
+                        setDefaultShift(draft.id)
+                    }
+                }
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        let newDraft = ShiftDraft.empty()
+                        shiftDrafts.append(newDraft)
+                        if shiftDrafts.count == 1 {
+                            setDefaultShift(newDraft.id)
+                        }
+                    }
+                } label: {
+                    Label("Thêm ca làm", systemImage: "plus.circle.fill")
+                }
+            } header: {
+                Text("Ca làm")
+            } footer: {
+                Text("Ít nhất một ca sẽ được đánh dấu là ca mặc định để tính giờ đi trễ.")
+                    .font(.footnote)
+            }
+
+        case .edit:
+            Section("Ca mặc định") {
                 if shifts.isEmpty {
-                    Text("No shifts defined for this branch yet.")
+                    Text("Chưa có ca làm nào cho chi nhánh này.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Shift", selection: $defaultShiftId) {
-                        Text("None").tag(UUID?.none)
+                    Picker("Ca", selection: $defaultShiftId) {
+                        Text("Không").tag(UUID?.none)
                         ForEach(shifts) { shift in
                             Text(shift.label).tag(UUID?.some(shift.id))
                         }
@@ -259,12 +283,35 @@ struct BranchEditorView: View {
 
     @ViewBuilder
     private var wifiSection: some View {
-        if case .edit(let branch) = mode {
-            Section("Wi-Fi allowlist") {
+        switch mode {
+        case .create:
+            Section {
+                ForEach($wifiDrafts) { $draft in
+                    WifiDraftRow(draft: $draft) {
+                        remove(wifi: draft.id)
+                    }
+                }
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        wifiDrafts.append(WifiDraft.empty())
+                    }
+                } label: {
+                    Label("Thêm WiFi (tùy chọn)", systemImage: "plus.circle.fill")
+                }
+            } header: {
+                Text("WiFi cho phép")
+            } footer: {
+                Text("Thêm địa chỉ BSSID (MAC) của router tại chi nhánh để giảm rủi ro chấm công gian lận.")
+                    .font(.footnote)
+            }
+
+        case .edit(let branch):
+            Section("Danh sách WiFi cho phép") {
                 NavigationLink {
                     BranchWifiView(branch: Branch(branch))
                 } label: {
-                    Label("Approved networks", systemImage: "wifi")
+                    Label("Mạng đã duyệt", systemImage: "wifi")
                 }
             }
         }
@@ -281,11 +328,11 @@ struct BranchEditorView: View {
                         if isDeleting {
                             ProgressView()
                         } else {
-                            Text("Delete branch")
+                            Text("Xóa chi nhánh")
                         }
                         Spacer()
                         if let count = assignedEmployeeCount {
-                            Text("\(count) employee\(count == 1 ? "" : "s")")
+                            Text("\(count) nhân viên")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -293,10 +340,34 @@ struct BranchEditorView: View {
                 }
                 .disabled(isDeleting)
             } header: {
-                Text("Danger zone")
+                Text("Vùng nguy hiểm")
             } footer: {
-                Text("Employees assigned to this branch will become unassigned.")
+                Text("Nhân viên thuộc chi nhánh này sẽ bị bỏ phân công.")
             }
+        }
+    }
+
+    // MARK: - Draft helpers
+
+    private func remove(shift id: UUID) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            shiftDrafts.removeAll { $0.id == id }
+            // If we just removed the default, promote the first remaining shift.
+            if !shiftDrafts.contains(where: { $0.isDefault }), let first = shiftDrafts.first {
+                setDefaultShift(first.id)
+            }
+        }
+    }
+
+    private func setDefaultShift(_ id: UUID) {
+        for idx in shiftDrafts.indices {
+            shiftDrafts[idx].isDefault = (shiftDrafts[idx].id == id)
+        }
+    }
+
+    private func remove(wifi id: UUID) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            wifiDrafts.removeAll { $0.id == id }
         }
     }
 
@@ -304,7 +375,7 @@ struct BranchEditorView: View {
 
     private var navTitle: String {
         switch mode {
-        case .create: return "New branch"
+        case .create: return "Chi nhánh mới"
         case .edit(let b): return b.name
         }
     }
@@ -316,6 +387,19 @@ struct BranchEditorView: View {
         guard !trimmed.isEmpty else { return false }
         guard !tz.isEmpty else { return false }
         guard lat.isFinite, lng.isFinite else { return false }
+
+        if case .create = mode {
+            // Shifts are optional, but if present they must all be named.
+            for draft in shiftDrafts {
+                let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return false }
+            }
+            // WiFi BSSIDs must be non-empty if the row exists.
+            for draft in wifiDrafts {
+                let b = draft.bssid.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !b.isEmpty else { return false }
+            }
+        }
         return true
     }
 
@@ -342,9 +426,19 @@ struct BranchEditorView: View {
                     p_lng: lng,
                     p_radius_m: radiusM
                 )
-                try await SupabaseManager.shared.client
+                // `create_branch` returns a single-row `table (id uuid)` so
+                // PostgREST yields `[{"id": "..."}]` — safest shape to decode.
+                let rows: [CreateBranchResult] = try await SupabaseManager.shared.client
                     .rpc("create_branch", params: params)
                     .execute()
+                    .value
+                guard let newBranchId = rows.first?.id else {
+                    errorMessage = "Máy chủ không trả về mã chi nhánh."
+                    return
+                }
+
+                try await persistDrafts(branchId: newBranchId)
+
                 dismiss()
                 await onCompletion?(nil)
 
@@ -392,6 +486,67 @@ struct BranchEditorView: View {
         }
     }
 
+    /// Inserts shift and wifi rows for a newly created branch. Called only from
+    /// the `.create` path. Partial failures are surfaced as the error message;
+    /// the branch row itself is already persisted at this point.
+    private func persistDrafts(branchId: UUID) async throws {
+        // Shifts: insert first so we have IDs for `default_shift_id`.
+        var insertedDefaultShiftId: UUID?
+        if !shiftDrafts.isEmpty {
+            let rows = shiftDrafts.map { draft in
+                ShiftInsert(
+                    branchId: branchId,
+                    name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    startLocal: Self.timeFormatter.string(from: draft.start),
+                    endLocal: Self.timeFormatter.string(from: draft.end),
+                    graceMin: draft.graceMin,
+                    isDefault: draft.isDefault
+                )
+            }
+            let inserted: [ShiftInsertResponse] = try await SupabaseManager.shared.client
+                .from("shifts")
+                .insert(rows)
+                .select("id")
+                .execute()
+                .value
+
+            // Match inserted ids back to the draft marked as default (order is
+            // preserved by Postgres on bulk insert).
+            if let defaultIdx = shiftDrafts.firstIndex(where: { $0.isDefault }),
+               inserted.indices.contains(defaultIdx) {
+                insertedDefaultShiftId = inserted[defaultIdx].id
+            }
+        }
+
+        // WiFi: branch_id + bssid, optional ssid; drop blanks.
+        let wifiRows: [BranchWifiInsert] = wifiDrafts.compactMap { draft -> BranchWifiInsert? in
+            let bssid = draft.bssid.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !bssid.isEmpty else { return nil }
+            let ssid = draft.ssid.trimmingCharacters(in: .whitespacesAndNewlines)
+            return BranchWifiInsert(
+                branchId: branchId,
+                bssid: bssid,
+                ssid: ssid.isEmpty ? nil : ssid
+            )
+        }
+        if !wifiRows.isEmpty {
+            try await SupabaseManager.shared.client
+                .from("branch_wifi")
+                .insert(wifiRows)
+                .execute()
+        }
+
+        // Link the chosen default shift back to the branch.
+        if let defaultShiftId = insertedDefaultShiftId {
+            let payload = BranchShiftUpdate(defaultShiftId: defaultShiftId)
+            try await SupabaseManager.shared.client
+                .from("branches")
+                .update(payload)
+                .eq("id", value: branchId.uuidString)
+                .execute()
+        }
+    }
+
     private func deleteBranch() async {
         guard case .edit(let existing) = mode else { return }
         isDeleting = true
@@ -420,7 +575,6 @@ struct BranchEditorView: View {
                 .execute()
             assignedEmployeeCount = response.count ?? 0
         } catch {
-            // Non-fatal: the confirmation dialog just falls back to "0".
             assignedEmployeeCount = 0
         }
     }
@@ -457,14 +611,153 @@ struct BranchEditorView: View {
             errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Time formatter
+
+    /// `HH:mm:ss` matches the `time` Postgres type without fractional seconds.
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm:ss"
+        return f
+    }()
+}
+
+// MARK: - Shift draft
+
+struct ShiftDraft: Identifiable, Hashable {
+    let id: UUID
+    var name: String
+    var start: Date
+    var end: Date
+    var graceMin: Int
+    var isDefault: Bool
+
+    static func empty() -> ShiftDraft {
+        ShiftDraft(
+            id: UUID(),
+            name: "",
+            start: dateAt(hour: 8, minute: 0),
+            end: dateAt(hour: 17, minute: 0),
+            graceMin: 15,
+            isDefault: false
+        )
+    }
+
+    static func defaultMorning() -> ShiftDraft {
+        ShiftDraft(
+            id: UUID(),
+            name: "Ca sáng",
+            start: dateAt(hour: 8, minute: 0),
+            end: dateAt(hour: 17, minute: 0),
+            graceMin: 15,
+            isDefault: true
+        )
+    }
+
+    private static func dateAt(hour: Int, minute: Int) -> Date {
+        var comps = DateComponents()
+        comps.hour = hour
+        comps.minute = minute
+        return Calendar.current.date(from: comps) ?? Date()
+    }
+}
+
+private struct ShiftDraftRow: View {
+    @Binding var draft: ShiftDraft
+    let onDelete: () -> Void
+    let setDefault: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                TextField("Tên ca (VD: Ca sáng)", text: $draft.name)
+                    .textInputAutocapitalization(.sentences)
+
+                Button {
+                    setDefault()
+                } label: {
+                    Image(systemName: draft.isDefault ? "star.fill" : "star")
+                        .foregroundStyle(draft.isDefault ? .yellow : .secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(draft.isDefault ? "Đã là ca mặc định" : "Đặt làm ca mặc định")
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Xóa ca")
+            }
+
+            HStack {
+                DatePicker("Bắt đầu", selection: $draft.start, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                Text("→").foregroundStyle(.secondary)
+                DatePicker("Kết thúc", selection: $draft.end, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                Spacer()
+                Stepper("Trễ \(draft.graceMin)p", value: $draft.graceMin, in: 0...60, step: 5)
+                    .labelsHidden()
+                    .accessibilityLabel("Thời gian cho phép trễ, đang là \(draft.graceMin) phút")
+                Text("\(draft.graceMin)p trễ")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Wifi draft
+
+struct WifiDraft: Identifiable, Hashable {
+    let id: UUID
+    var bssid: String
+    var ssid: String
+
+    static func empty() -> WifiDraft {
+        WifiDraft(id: UUID(), bssid: "", ssid: "")
+    }
+}
+
+private struct WifiDraftRow: View {
+    @Binding var draft: WifiDraft
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                TextField("BSSID (VD: aa:bb:cc:dd:ee:ff)", text: $draft.bssid)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.body.monospaced())
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Xóa WiFi")
+            }
+
+            TextField("Tên mạng (tùy chọn)", text: $draft.ssid)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
 }
 
 // MARK: - RPC param DTOs
 
-/// Matches `.rpc("create_branch", params: ...)` — the Supabase SDK encodes
-/// a Codable struct straight into the JSON-RPC body, so the property names
-/// must match the SQL arg names (we use `p_*` so there's no snake-case
-/// ambiguity and no CodingKeys needed).
 private struct CreateBranchParams: Encodable, Sendable {
     let p_name: String
     let p_tz: String
@@ -492,6 +785,43 @@ private struct BranchShiftUpdate: Encodable, Sendable {
     }
 }
 
+private struct ShiftInsert: Encodable, Sendable {
+    let branchId: UUID
+    let name: String
+    let startLocal: String
+    let endLocal: String
+    let graceMin: Int
+    let isDefault: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case branchId = "branch_id"
+        case name
+        case startLocal = "start_local"
+        case endLocal = "end_local"
+        case graceMin = "grace_min"
+        case isDefault = "is_default"
+    }
+}
+
+private struct ShiftInsertResponse: Decodable, Sendable {
+    let id: UUID
+}
+
+private struct CreateBranchResult: Decodable, Sendable {
+    let id: UUID
+}
+
+private struct BranchWifiInsert: Encodable, Sendable {
+    let branchId: UUID
+    let bssid: String
+    let ssid: String?
+
+    enum CodingKeys: String, CodingKey {
+        case branchId = "branch_id"
+        case bssid, ssid
+    }
+}
+
 // MARK: - Shift row DTO
 
 extension BranchEditorView {
@@ -502,7 +832,7 @@ extension BranchEditorView {
         let endLocal: String?
 
         var label: String {
-            let title = (name?.isEmpty == false) ? name! : "Shift"
+            let title = (name?.isEmpty == false) ? name! : "Ca"
             let start = startLocal ?? "?"
             let end = endLocal ?? "?"
             return "\(title) (\(start)–\(end))"

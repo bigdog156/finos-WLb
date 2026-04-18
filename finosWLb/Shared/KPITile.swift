@@ -68,13 +68,13 @@ struct KPITile: View {
 #Preview {
     VStack {
         HStack(spacing: 12) {
-            KPITile(title: "Employees", value: 124, systemImage: "person.3", tint: .blue)
-            KPITile(title: "Present",   value: 102, systemImage: "checkmark.circle", tint: .green)
-            KPITile(title: "Late",      value: 14,  systemImage: "clock",            tint: .orange)
+            KPITile(title: "Nhân viên", value: 124, systemImage: "person.3", tint: .blue)
+            KPITile(title: "Có mặt",   value: 102, systemImage: "checkmark.circle", tint: .green)
+            KPITile(title: "Trễ",      value: 14,  systemImage: "clock",            tint: .orange)
         }
         HStack(spacing: 12) {
-            KPITile(title: "Flagged", value: 3, systemImage: "flag.fill",          tint: .yellow)
-            KPITile(title: "Absent",  value: 8, systemImage: "person.slash",       tint: .gray)
+            KPITile(title: "Gắn cờ", value: 3, systemImage: "flag.fill",          tint: .yellow)
+            KPITile(title: "Vắng",  value: 8, systemImage: "person.slash",       tint: .gray)
         }
     }
     .padding()

@@ -29,21 +29,21 @@ struct ManagerReportsView: View {
 
     var body: some View {
         content
-            .navigationTitle("Reports")
+            .navigationTitle("Báo cáo")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button {
                             showExportSheet = true
                         } label: {
-                            Label("Export CSV…", systemImage: "square.and.arrow.down")
+                            Label("Xuất CSV…", systemImage: "square.and.arrow.down")
                         }
                         ShareLink(item: summaryText()) {
-                            Label("Share summary", systemImage: "text.bubble")
+                            Label("Chia sẻ tóm tắt", systemImage: "text.bubble")
                         }
                         .disabled(scope != .week)
                     } label: {
-                        Label("Export", systemImage: "square.and.arrow.up")
+                        Label("Xuất", systemImage: "square.and.arrow.up")
                     }
                 }
             }
@@ -79,7 +79,7 @@ struct ManagerReportsView: View {
             ProgressView()
         } else if let errorMessage, profiles.isEmpty, dayRows.isEmpty, monthSeries.isEmpty {
             ContentUnavailableView(
-                "Couldn't load reports",
+                "Không thể tải báo cáo",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
             )
@@ -114,21 +114,21 @@ struct ManagerReportsView: View {
             case .day:
                 let byStatus = Dictionary(grouping: dayRows, by: \.status).mapValues(\.count)
                 return [
-                    ("Present", dayRows.filter { $0.status != .absent }.count),
-                    ("Late",    byStatus[.late] ?? 0),
-                    ("Flagged", byStatus[.flagged] ?? 0),
+                    ("Có mặt",  dayRows.filter { $0.status != .absent }.count),
+                    ("Trễ",     byStatus[.late] ?? 0),
+                    ("Gắn cờ",  byStatus[.flagged] ?? 0),
                 ]
             case .week:
                 return [
-                    ("Late events", events.filter { $0.status == .late }.count),
-                    ("Absences",    absentDays),
-                    ("Total",       events.count),
+                    ("Sự kiện trễ", events.filter { $0.status == .late }.count),
+                    ("Vắng",        absentDays),
+                    ("Tổng",        events.count),
                 ]
             case .month:
                 return [
-                    ("On time", monthSeries.reduce(0) { $0 + $1.onTime }),
-                    ("Late",    monthSeries.reduce(0) { $0 + $1.late }),
-                    ("Absent",  monthSeries.reduce(0) { $0 + $1.absent }),
+                    ("Đúng giờ", monthSeries.reduce(0) { $0 + $1.onTime }),
+                    ("Trễ",      monthSeries.reduce(0) { $0 + $1.late }),
+                    ("Vắng",     monthSeries.reduce(0) { $0 + $1.absent }),
                 ]
             }
         }()
@@ -145,9 +145,9 @@ struct ManagerReportsView: View {
     private var dayBody: some View {
         if dayRows.isEmpty {
             ContentUnavailableView(
-                "No attendance",
+                "Không có chấm công",
                 systemImage: "calendar",
-                description: Text("No employees have activity for \(anchorDate.formatted(date: .abbreviated, time: .omitted)).")
+                description: Text("Không có nhân viên nào có hoạt động vào \(anchorDate.formatted(date: .abbreviated, time: .omitted)).")
             )
             .padding(.top, 24)
         } else {
@@ -175,7 +175,7 @@ struct ManagerReportsView: View {
     }
 
     private func dayRow(_ row: AttendanceDayRow) -> some View {
-        let name = profiles.first { $0.id == row.employeeId }?.fullName ?? "Employee"
+        let name = profiles.first { $0.id == row.employeeId }?.fullName ?? "Nhân viên"
         return NavigationLink {
             EmployeeDayDetailView(
                 employeeId: row.employeeId,
@@ -206,13 +206,13 @@ struct ManagerReportsView: View {
         let inStr = row.firstIn.flatMap(parseTime) ?? "—"
         let outStr = row.lastOut.flatMap(parseTime) ?? "—"
         var parts = ["\(inStr) – \(outStr)"]
-        if let w = row.workedMin { parts.append("worked \(hm(w))") }
-        if let ot = row.overtimeMin, ot > 0 { parts.append("OT \(hm(ot))") }
+        if let w = row.workedMin { parts.append("làm \(hm(w))") }
+        if let ot = row.overtimeMin, ot > 0 { parts.append("TC \(hm(ot))") }
         return parts.joined(separator: " · ")
     }
 
     private func hm(_ minutes: Int) -> String {
-        "\(minutes / 60)h \(String(format: "%02d", minutes % 60))m"
+        "\(minutes / 60)h \(String(format: "%02d", minutes % 60))p"
     }
 
     // MARK: - Week body (existing Mon–Fri grid)
@@ -221,9 +221,9 @@ struct ManagerReportsView: View {
     private var weekBody: some View {
         if profiles.isEmpty {
             ContentUnavailableView(
-                "No employees yet",
+                "Chưa có nhân viên",
                 systemImage: "person.2",
-                description: Text("Assign employees to this branch from Admin.")
+                description: Text("Phân công nhân viên vào chi nhánh này từ Quản trị.")
             )
         } else {
             weekGrid
@@ -324,7 +324,7 @@ struct ManagerReportsView: View {
                         date: day
                     )
                 } label: {
-                    Label("View events", systemImage: "arrow.right.circle")
+                    Label("Xem sự kiện", systemImage: "arrow.right.circle")
                 }
                 .padding(.top, 4)
             }
@@ -382,9 +382,9 @@ struct ManagerReportsView: View {
     private var monthBody: some View {
         if profiles.isEmpty {
             ContentUnavailableView(
-                "No employees yet",
+                "Chưa có nhân viên",
                 systemImage: "person.2",
-                description: Text("Assign employees to this branch from Admin.")
+                description: Text("Phân công nhân viên vào chi nhánh này từ Quản trị.")
             )
         } else {
             VStack(spacing: 12) {
@@ -422,7 +422,7 @@ struct ManagerReportsView: View {
             HStack {
                 Text(profile.fullName).font(.subheadline).fontWeight(.semibold)
                 Spacer()
-                Text("P \(presentCount) · L \(lateCount) · F \(flagCount) · OT \(otMinutes / 60)h")
+                Text("CM \(presentCount) · T \(lateCount) · GC \(flagCount) · TC \(otMinutes / 60)h")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -454,8 +454,8 @@ struct ManagerReportsView: View {
         range.timeStyle = .none
         let label = range.string(from: start, to: end) ?? ""
         var lines: [String] = []
-        lines.append("Week of \(label)")
-        lines.append("Late: \(events.filter { $0.status == .late }.count)  Absent: \(absentDays)  Total: \(events.count)")
+        lines.append("Tuần bắt đầu \(label)")
+        lines.append("Trễ: \(events.filter { $0.status == .late }.count)  Vắng: \(absentDays)  Tổng: \(events.count)")
         lines.append("")
         for profile in profiles {
             var parts: [String] = []
@@ -487,16 +487,16 @@ struct ManagerReportsView: View {
 
     private var exportTitle: String {
         switch scope {
-        case .day:   "Daily report"
-        case .week:  "Weekly report"
-        case .month: "Monthly report"
+        case .day:   "Báo cáo ngày"
+        case .week:  "Báo cáo tuần"
+        case .month: "Báo cáo tháng"
         }
     }
 
     private var exportSummary: String {
         let (from, to) = scopeRange()
         let f = DateFormatter(); f.dateStyle = .medium
-        return "\(f.string(from: from)) – \(f.string(from: to)) · Your branch"
+        return "\(f.string(from: from)) – \(f.string(from: to)) · Chi nhánh của bạn"
     }
 
     private func scopeRange() -> (Date, Date) {

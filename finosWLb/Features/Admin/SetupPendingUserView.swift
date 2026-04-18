@@ -48,12 +48,12 @@ struct SetupPendingUserView: View {
                 }
             }
             .overlay { overlay }
-            .navigationTitle("Setup user")
+            .navigationTitle("Thiết lập người dùng")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $search, prompt: "Search name")
+            .searchable(text: $search, prompt: "Tìm theo tên")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Xong") { dismiss() }
                 }
             }
             .task { await load() }
@@ -75,7 +75,7 @@ struct SetupPendingUserView: View {
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile.fullName).font(.headline)
-                Text("Pending setup · \(profile.role.rawValue.capitalized)")
+                Text("Đang chờ thiết lập · \(roleLabel(profile.role))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -85,6 +85,14 @@ struct SetupPendingUserView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
+    }
+
+    private func roleLabel(_ role: UserRole) -> String {
+        switch role {
+        case .admin: return "Quản trị viên"
+        case .manager: return "Quản lý"
+        case .employee: return "Nhân viên"
+        }
     }
 
     private func initials(from name: String) -> String {
@@ -100,9 +108,9 @@ struct SetupPendingUserView: View {
             ProgressView()
         } else if pending.isEmpty, errorMessage == nil {
             ContentUnavailableView(
-                "No pending users",
+                "Không có người dùng đang chờ",
                 systemImage: "person.crop.circle.badge.checkmark",
-                description: Text("Users appear here after they self-register. Pull to refresh.")
+                description: Text("Người dùng sẽ xuất hiện ở đây sau khi họ tự đăng ký. Kéo để làm mới.")
             )
         } else if filtered.isEmpty {
             ContentUnavailableView.search(text: search)

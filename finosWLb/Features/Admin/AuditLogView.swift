@@ -18,7 +18,7 @@ struct AuditLogView: View {
 
         var label: String {
             switch self {
-            case .all: return "All actions"
+            case .all: return "Tất cả hành động"
             case .specific(let s): return s
             }
         }
@@ -47,7 +47,7 @@ struct AuditLogView: View {
 
         var label: String {
             switch self {
-            case .all: return "All tables"
+            case .all: return "Tất cả bảng"
             case .specific(let s): return s
             }
         }
@@ -70,10 +70,10 @@ struct AuditLogView: View {
 
         var label: String {
             switch self {
-            case .all: return "All dates"
-            case .today: return "Today"
-            case .last7: return "Last 7 days"
-            case .last30: return "Last 30 days"
+            case .all: return "Tất cả ngày"
+            case .today: return "Hôm nay"
+            case .last7: return "7 ngày gần nhất"
+            case .last30: return "30 ngày gần nhất"
             case .custom(let s, let e):
                 let f = DateFormatter()
                 f.dateStyle = .short
@@ -167,7 +167,7 @@ struct AuditLogView: View {
         }
         .listStyle(.plain)
         .overlay { overlay }
-        .navigationTitle("Audit Log")
+        .navigationTitle("Nhật ký kiểm toán")
         .sheet(isPresented: $showingCustomRange) {
             customRangeSheet
         }
@@ -230,32 +230,32 @@ struct AuditLogView: View {
             Button {
                 dateFilter = .all
             } label: {
-                Label("All dates",
+                Label("Tất cả ngày",
                       systemImage: isDateFilter(.all) ? "checkmark" : "")
             }
             Button {
                 dateFilter = .today
             } label: {
-                Label("Today",
+                Label("Hôm nay",
                       systemImage: isDateFilter(.today) ? "checkmark" : "")
             }
             Button {
                 dateFilter = .last7
             } label: {
-                Label("Last 7 days",
+                Label("7 ngày gần nhất",
                       systemImage: isDateFilter(.last7) ? "checkmark" : "")
             }
             Button {
                 dateFilter = .last30
             } label: {
-                Label("Last 30 days",
+                Label("30 ngày gần nhất",
                       systemImage: isDateFilter(.last30) ? "checkmark" : "")
             }
             Divider()
             Button {
                 showingCustomRange = true
             } label: {
-                Label("Custom…",
+                Label("Tùy chỉnh…",
                       systemImage: isCustomDateFilter() ? "checkmark" : "calendar")
             }
         } label: {
@@ -296,22 +296,22 @@ struct AuditLogView: View {
     private var customRangeSheet: some View {
         NavigationStack {
             Form {
-                DatePicker("Start",
+                DatePicker("Bắt đầu",
                            selection: $customStart,
                            displayedComponents: .date)
-                DatePicker("End",
+                DatePicker("Kết thúc",
                            selection: $customEnd,
                            in: customStart...,
                            displayedComponents: .date)
             }
-            .navigationTitle("Custom range")
+            .navigationTitle("Khoảng tùy chỉnh")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingCustomRange = false }
+                    Button("Hủy") { showingCustomRange = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button("Áp dụng") {
                         dateFilter = .custom(customStart, customEnd)
                         showingCustomRange = false
                     }
@@ -333,7 +333,7 @@ struct AuditLogView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("by \(actorLabel(for: entry))")
+            Text("bởi \(actorLabel(for: entry))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -346,7 +346,7 @@ struct AuditLogView: View {
     }
 
     private func actorLabel(for entry: AuditLogEntry) -> String {
-        guard let id = entry.actorId else { return "system" }
+        guard let id = entry.actorId else { return "hệ thống" }
         return nameCache[id] ?? id.uuidString.prefix(8).description
     }
 
@@ -378,7 +378,7 @@ struct AuditLogView: View {
             if isLoadingMore {
                 ProgressView()
             } else {
-                Button("Load more") {
+                Button("Tải thêm") {
                     Task { await loadMore() }
                 }
                 .font(.footnote.weight(.medium))
@@ -402,13 +402,13 @@ struct AuditLogView: View {
             ProgressView()
         } else if let errorMessage, entries.isEmpty {
             ContentUnavailableView(
-                "Couldn't load audit log",
+                "Không thể tải nhật ký kiểm toán",
                 systemImage: "exclamationmark.triangle",
                 description: Text(errorMessage)
             )
         } else if entries.isEmpty {
             ContentUnavailableView(
-                "No audit entries",
+                "Không có mục kiểm toán",
                 systemImage: "doc.text.magnifyingglass"
             )
         }
@@ -520,18 +520,18 @@ private struct AuditPayloadDetail: View {
                 }
                 .padding()
             }
-            .navigationTitle("Payload")
+            .navigationTitle("Dữ liệu")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Đóng") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         UIPasteboard.general.string = prettyPrintedPayload
                         copied = true
                     } label: {
-                        Label(copied ? "Copied" : "Copy JSON",
+                        Label(copied ? "Đã sao chép" : "Sao chép JSON",
                               systemImage: copied ? "checkmark" : "doc.on.doc")
                     }
                 }

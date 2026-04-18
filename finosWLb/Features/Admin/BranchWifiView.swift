@@ -21,7 +21,7 @@ struct BranchWifiView: View {
 
     var body: some View {
         List {
-            Section("Add BSSID") {
+            Section("Thêm BSSID") {
                 TextField("aa:bb:cc:dd:ee:ff", text: $newBssid)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -32,7 +32,7 @@ struct BranchWifiView: View {
                         if lowered != newValue { newBssid = lowered }
                     }
 
-                TextField("SSID (optional)", text: $newSsid)
+                TextField("SSID (tùy chọn)", text: $newSsid)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 
@@ -40,7 +40,7 @@ struct BranchWifiView: View {
                     Task { await useCurrentWifi() }
                 } label: {
                     HStack {
-                        Label("Use current Wi-Fi", systemImage: "wifi")
+                        Label("Dùng WiFi hiện tại", systemImage: "wifi")
                         Spacer()
                         if isReadingWifi { ProgressView() }
                     }
@@ -51,7 +51,7 @@ struct BranchWifiView: View {
                     Task { await addRow() }
                 } label: {
                     HStack {
-                        Text("Add")
+                        Text("Thêm")
                         Spacer()
                         if isAdding { ProgressView() }
                     }
@@ -59,9 +59,9 @@ struct BranchWifiView: View {
                 .disabled(!canAdd || isAdding)
             }
 
-            Section("Approved networks") {
+            Section("Mạng đã duyệt") {
                 if rows.isEmpty && !isLoading {
-                    Text("No BSSIDs yet.")
+                    Text("Chưa có BSSID nào.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -139,7 +139,7 @@ struct BranchWifiView: View {
         let ssid: String? = ssidTrimmed.isEmpty ? nil : ssidTrimmed
 
         guard isValidBssid(bssid) else {
-            errorMessage = "BSSID must look like aa:bb:cc:dd:ee:ff."
+            errorMessage = "BSSID phải có dạng aa:bb:cc:dd:ee:ff."
             return
         }
 
@@ -190,7 +190,7 @@ struct BranchWifiView: View {
         defer { isReadingWifi = false }
 
         guard let network = await wifiService.currentNetwork() else {
-            errorMessage = "Couldn't read current Wi-Fi. Make sure you're connected and the app has the Access WiFi Information capability."
+            errorMessage = "Không thể đọc WiFi hiện tại. Hãy đảm bảo bạn đang kết nối và ứng dụng có quyền Access WiFi Information."
             return
         }
         newBssid = network.bssid

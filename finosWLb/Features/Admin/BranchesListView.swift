@@ -29,7 +29,7 @@ struct BranchesListView: View {
                     Button(role: .destructive) {
                         pendingDelete = branch
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label("Xóa", systemImage: "trash")
                     }
                 }
             }
@@ -43,8 +43,8 @@ struct BranchesListView: View {
             }
         }
         .overlay { overlay }
-        .navigationTitle("Branches")
-        .searchable(text: $search, prompt: "Search branches")
+        .navigationTitle("Chi nhánh")
+        .searchable(text: $search, prompt: "Tìm chi nhánh")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -52,7 +52,7 @@ struct BranchesListView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("New branch")
+                .accessibilityLabel("Chi nhánh mới")
             }
         }
         .sheet(isPresented: $showingCreate) {
@@ -71,12 +71,12 @@ struct BranchesListView: View {
             titleVisibility: .visible,
             presenting: pendingDelete
         ) { branch in
-            Button("Delete", role: .destructive) {
+            Button("Xóa", role: .destructive) {
                 Task { await delete(branch) }
             }
-            Button("Cancel", role: .cancel) { pendingDelete = nil }
+            Button("Hủy", role: .cancel) { pendingDelete = nil }
         } message: { _ in
-            Text("This will delete the branch. Employees assigned to it will become unassigned. Continue?")
+            Text("Thao tác này sẽ xóa chi nhánh. Nhân viên đang thuộc chi nhánh sẽ bị bỏ phân công. Tiếp tục?")
         }
         .task { await load() }
         .refreshable { await load() }
@@ -110,15 +110,15 @@ struct BranchesListView: View {
             ProgressView()
         } else if let error, branches.isEmpty {
             ContentUnavailableView(
-                "Couldn't load branches",
+                "Không thể tải chi nhánh",
                 systemImage: "exclamationmark.triangle",
                 description: Text(error)
             )
         } else if branches.isEmpty {
             ContentUnavailableView(
-                "No branches yet",
+                "Chưa có chi nhánh",
                 systemImage: "building.2",
-                description: Text("Tap + to create the first branch.")
+                description: Text("Nhấn + để tạo chi nhánh đầu tiên.")
             )
         } else if filtered.isEmpty {
             ContentUnavailableView.search(text: search)
@@ -137,7 +137,7 @@ struct BranchesListView: View {
     }
 
     private var deleteDialogTitle: String {
-        pendingDelete.map { "Delete \"\($0.name)\"?" } ?? "Delete branch?"
+        pendingDelete.map { "Xóa \"\($0.name)\"?" } ?? "Xóa chi nhánh?"
     }
 
     // MARK: - Networking

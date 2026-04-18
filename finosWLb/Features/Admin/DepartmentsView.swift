@@ -20,9 +20,9 @@ struct DepartmentsView: View {
 
     var body: some View {
         List {
-            Section("Add department") {
+            Section("Thêm phòng ban") {
                 HStack {
-                    TextField("Name", text: $newDeptName)
+                    TextField("Tên", text: $newDeptName)
                         .textInputAutocapitalization(.words)
                     Button {
                         Task { await addDepartment() }
@@ -30,16 +30,16 @@ struct DepartmentsView: View {
                         if isAdding {
                             ProgressView()
                         } else {
-                            Text("Add").fontWeight(.semibold)
+                            Text("Thêm").fontWeight(.semibold)
                         }
                     }
                     .disabled(!canAdd || isAdding)
                 }
             }
 
-            Section("Departments") {
+            Section("Phòng ban") {
                 if departments.isEmpty && !isLoading {
-                    Text("No departments yet.")
+                    Text("Chưa có phòng ban nào.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -67,7 +67,7 @@ struct DepartmentsView: View {
                         Button(role: .destructive) {
                             pendingDelete = dept
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("Xóa", systemImage: "trash")
                         }
                     }
                 }
@@ -86,25 +86,25 @@ struct DepartmentsView: View {
                 ProgressView()
             }
         }
-        .navigationTitle("Departments")
+        .navigationTitle("Phòng ban")
         .task { await load() }
         .refreshable { await load() }
-        .alert("Rename department",
+        .alert("Đổi tên phòng ban",
                isPresented: Binding(
                 get: { renameTarget != nil },
                 set: { if !$0 { renameTarget = nil } }
                ),
                presenting: renameTarget) { dept in
-            TextField("Name", text: $renameText)
+            TextField("Tên", text: $renameText)
                 .textInputAutocapitalization(.words)
-            Button("Save") {
+            Button("Lưu") {
                 Task { await rename(dept, to: renameText) }
             }
-            Button("Cancel", role: .cancel) {
+            Button("Hủy", role: .cancel) {
                 renameTarget = nil
             }
         } message: { _ in
-            Text("Enter a new name for this department.")
+            Text("Nhập tên mới cho phòng ban này.")
         }
         .confirmationDialog(
             deleteDialogTitle,
@@ -115,16 +115,16 @@ struct DepartmentsView: View {
             titleVisibility: .visible,
             presenting: pendingDelete
         ) { dept in
-            Button("Delete", role: .destructive) {
+            Button("Xóa", role: .destructive) {
                 Task { await delete(dept) }
             }
-            Button("Cancel", role: .cancel) { pendingDelete = nil }
+            Button("Hủy", role: .cancel) { pendingDelete = nil }
         } message: { dept in
             let count = counts[dept.id] ?? 0
             if count > 0 {
-                Text("\(count) employee\(count == 1 ? "" : "s") currently have this department. Deleting will unassign them.")
+                Text("\(count) nhân viên đang thuộc phòng ban này. Xóa sẽ bỏ phân công họ.")
             } else {
-                Text("This department has no members.")
+                Text("Phòng ban này chưa có thành viên.")
             }
         }
     }
@@ -136,12 +136,12 @@ struct DepartmentsView: View {
     }
 
     private var deleteDialogTitle: String {
-        pendingDelete.map { "Delete \"\($0.name)\"?" } ?? "Delete department?"
+        pendingDelete.map { "Xóa \"\($0.name)\"?" } ?? "Xóa phòng ban?"
     }
 
     private func personCountLabel(for dept: Department) -> String {
         let n = counts[dept.id] ?? 0
-        return "\(n) member\(n == 1 ? "" : "s")"
+        return "\(n) thành viên"
     }
 
     // MARK: - Networking

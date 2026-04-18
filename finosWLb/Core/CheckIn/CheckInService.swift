@@ -14,7 +14,7 @@ enum CheckInError: Error, LocalizedError {
         case .rejected(let reason):
             reason
         case .networkQueued:
-            "No connection — saved for automatic retry."
+            "Không có kết nối — đã lưu để tự động gửi lại."
         case .locationFailed(let reason):
             reason
         case .unexpected(let message):
@@ -49,7 +49,7 @@ final class CheckInService {
         self.modelContext = modelContext
     }
 
-    func submit(type: AttendanceEventType) async throws -> CheckInOutcome {
+    func submit(type: AttendanceEventType, note: String? = nil) async throws -> CheckInOutcome {
         isWorking = true
         defer { isWorking = false }
 
@@ -63,6 +63,8 @@ final class CheckInService {
         // Best-effort Wi-Fi read. Never fail the submission on a nil here — the
         // backend handles missing bssid/ssid gracefully.
         let wifi = await wifiService.currentNetwork()
+        let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let noteValue = (trimmedNote?.isEmpty == false) ? trimmedNote : nil
 
         let clientTs = Date()
         let body = CheckInBody(
@@ -72,7 +74,8 @@ final class CheckInService {
             lng: location.coordinate.longitude,
             accuracyM: location.horizontalAccuracy,
             bssid: wifi?.bssid,
-            ssid: wifi?.ssid
+            ssid: wifi?.ssid,
+            note: noteValue
         )
 
         do {
@@ -88,7 +91,7 @@ final class CheckInService {
         } catch let FunctionsError.httpError(code, data) where code == 422 {
             // Server wrote a `rejected` row and returned it with a reason.
             let rejection = (try? JSONDecoder().decode(CheckInResponse.self, from: data))?
-                .event.flaggedReason ?? "Rejected"
+                .event.flaggedReason ?? "Bị từ chối"
             throw CheckInError.rejected(rejection)
         } catch let FunctionsError.httpError(code, data) where (400..<500).contains(code) {
             // 400/403/404 etc. are validation failures the user needs to act on
@@ -100,34 +103,46 @@ final class CheckInService {
                 type: type,
                 clientTs: clientTs,
                 location: location,
-                wifi: wifi
+                wifi: wifi,
+                note: noteValue
             )
             throw CheckInError.networkQueued
         }
     }
 
     /// Maps the EF's `{error, detail}` shape to a user-facing message.
-    private static func friendlyMessage(from data: Data, status: Int) -> String {
+    /// Falls back to a status-based friendly message when the body doesn't
+    /// decode or the error code is unknown — the user never sees raw HTTP
+    /// codes. Add new EF error codes to `CheckInServerError`.
+    static func friendlyMessage(from data: Data, status: Int) -> String {
         let payload = try? JSONDecoder().decode(CheckInErrorPayload.self, from: data)
-        switch payload?.error {
-        case "profile_inactive":
-            return "Your account isn't active yet. Ask an admin to activate you."
-        case "no_branch_assigned":
-            return "You're not assigned to a branch yet. Ask an admin to assign one."
-        case "profile_not_found":
-            return "Your profile wasn't found. Sign out and back in."
-        case "branch_not_found":
-            return "Your assigned branch wasn't found."
-        case "unauthorized":
-            return "Your session expired. Please sign in again."
-        case "bad_request":
-            return "Check-in request was invalid. \(payload?.detail ?? "")"
-                .trimmingCharacters(in: .whitespaces)
-        default:
-            if let detail = payload?.detail, !detail.isEmpty {
-                return "Check-in failed (HTTP \(status)): \(detail)"
+        if let code = payload?.error, let known = CheckInServerError(rawValue: code) {
+            if known == .badRequest, let detail = payload?.detail, !detail.isEmpty {
+                return "\(known.userMessage) (\(detail))"
             }
-            return "Check-in failed (HTTP \(status))."
+            return known.userMessage
+        }
+        return fallbackMessage(forStatus: status)
+    }
+
+    /// User-facing copy for HTTP failures that don't carry a recognizable EF
+    /// error code (e.g., gateway 401 before the EF runs, timeouts, 5xx).
+    static func fallbackMessage(forStatus status: Int) -> String {
+        switch status {
+        case 401:
+            return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+        case 403:
+            return "Bạn không có quyền thực hiện thao tác này."
+        case 404:
+            return "Không tìm thấy tài nguyên yêu cầu."
+        case 408, 504:
+            return "Yêu cầu đã hết thời gian. Kiểm tra kết nối và thử lại."
+        case 429:
+            return "Quá nhiều lần thử. Vui lòng chờ một chút rồi thử lại."
+        case 500..<600:
+            return "Máy chủ đang gặp sự cố. Vui lòng thử lại sau giây lát."
+        default:
+            return "Đã có lỗi xảy ra. Vui lòng thử lại."
         }
     }
 
@@ -135,7 +150,8 @@ final class CheckInService {
         type: AttendanceEventType,
         clientTs: Date,
         location: CLLocation,
-        wifi: (bssid: String, ssid: String)?
+        wifi: (bssid: String, ssid: String)?,
+        note: String?
     ) {
         let pending = PendingCheckIn(
             type: type.rawValue,
@@ -144,7 +160,8 @@ final class CheckInService {
             lng: location.coordinate.longitude,
             accuracyM: location.horizontalAccuracy,
             bssid: wifi?.bssid,
-            ssid: wifi?.ssid
+            ssid: wifi?.ssid,
+            note: note
         )
         modelContext.insert(pending)
         try? modelContext.save()
@@ -167,7 +184,8 @@ final class CheckInService {
                 lng: item.lng,
                 accuracyM: item.accuracyM,
                 bssid: item.bssid,
-                ssid: item.ssid
+                ssid: item.ssid,
+                note: item.note
             )
             do {
                 let _: CheckInResponse = try await client.functions.invoke(
